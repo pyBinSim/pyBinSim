@@ -10,6 +10,7 @@ Install
 ::
 
     conda create --name binsim35 python=3.5 numpy scipy
+    source activate binsim35
     pip install pybinsim
 
 Run
@@ -30,7 +31,7 @@ Create ``pyBinSimSettings.txt`` file with content like this
     loudnessFactor 5
 
 
-Start Binarual Simulation
+Start Binaural Simulation
 
 ::
 
