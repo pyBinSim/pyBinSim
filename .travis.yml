@@ -10,6 +10,7 @@ addons:
     packages:
       - libfftw3-dev
       - gcc
+      - portaudio19-dev
 
 install:
 
