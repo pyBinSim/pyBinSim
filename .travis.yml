@@ -4,7 +4,11 @@ python:
   - "3.5"
   - "3.6"
 
-install: pip install pytest
+install:
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy
+  - source activate test-environment
+  - pip install .
 
 # command to run tests
-script: pytest
+script:
+  - python setup.py test
