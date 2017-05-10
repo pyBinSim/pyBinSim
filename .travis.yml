@@ -4,10 +4,16 @@ python:
   - "3.5"
   - "3.6"
 
+
+addons:
+  apt:
+    packages:
+      - libfftw3-dev
+      - gcc
+
 install:
 
   - sudo apt-get update
-  - sudo apt-get install -y -qq gcc libfftw3-dev python-pyaudio python3-pyaudio portaudio19-dev python-all-dev
   # We do this conditionally because it saves us some downloading if the
   # version is the same.
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
