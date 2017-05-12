@@ -4,8 +4,6 @@ import sys
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
-import pybinsim
-
 VERSION = "0.0.1"
 
 class PyTest(TestCommand):
