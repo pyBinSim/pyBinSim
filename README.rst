@@ -35,9 +35,9 @@ Start Binaural Simulation
 
 ::
 
-    from pybinsim import BinSim
+    import pybinsim
 
-    with BinSim('pyBinSimSettings.txt') as binsim:
+    with pybinsim.BinSim('pyBinSimSettings.txt') as binsim:
         binsim.stream_start()
 
 
