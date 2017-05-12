@@ -1,3 +1,6 @@
+.. image:: https://travis-ci.org/pyBinSim/pyBinSim.svg?branch=master
+    :target: https://travis-ci.org/pyBinSim/pyBinSim
+
 PyBinSim
 ========
 
@@ -6,8 +9,9 @@ Install
 
 ::
 
-    conda create --name binsim35 python=3.5 numpy scipy
-    pip install pybinsim
+    $ conda create --name binsim35 python=3.5 numpy scipy
+    $ source activate binsim35
+    $ pip install pybinsim
 
 Run
 ---
@@ -27,7 +31,7 @@ Create ``pyBinSimSettings.txt`` file with content like this
     loudnessFactor 5
 
 
-Start Binarual Simulation
+Start Binaural Simulation
 
 ::
 
