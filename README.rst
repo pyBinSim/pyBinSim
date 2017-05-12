@@ -40,5 +40,8 @@ Start Binaural Simulation
     with pybinsim.BinSim('pyBinSimSettings.txt') as binsim:
         binsim.stream_start()
 
+Demos
+-----
 
+Check the https://github.com/pyBinSim/AppExamples repository for ready-to-use demos.
 
