@@ -6,6 +6,7 @@ from setuptools.command.test import test as TestCommand
 
 import pybinsim
 
+VERSION = "0.0.1"
 
 class PyTest(TestCommand):
     user_options = [('pytest-args=', 'a', "Arguments to pass to pytest")]
@@ -23,7 +24,7 @@ class PyTest(TestCommand):
 
 setup(
     name='pybinsim',
-    version=pybinsim.__version__(),
+    version=VERSION,
     license='Do not use this!',
     author='Annika Neidhardt, Florian Klein, Thomas Koellmer',
     author_email='thomas.koellmer@tu-ilmenau.de',
