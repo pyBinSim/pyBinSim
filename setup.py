@@ -4,7 +4,7 @@ import sys
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
-VERSION = "0.0.1"
+VERSION = "1.0.0"
 
 class PyTest(TestCommand):
     user_options = [('pytest-args=', 'a', "Arguments to pass to pytest")]
@@ -23,7 +23,7 @@ class PyTest(TestCommand):
 setup(
     name='pybinsim',
     version=VERSION,
-    license='Do not use this!',
+    license='MIT',
     author='Annika Neidhardt, Florian Klein, Thomas Koellmer',
     author_email='thomas.koellmer@tu-ilmenau.de',
     url='https://github.com/pyBinSim/pyBinSim',
@@ -57,7 +57,8 @@ setup(
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5'
+        'Programming Language :: Python :: 3.5',
+        'License :: OSI Approved :: MIT License'
     ],
 
 )
