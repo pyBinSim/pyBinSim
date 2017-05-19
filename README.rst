@@ -89,6 +89,15 @@ When you want to play another sound file you send:
 
 The audiofile has to be located on the pc where pyBinSim runs. Files are not transmitted over network.
 
+
+Demos
+-----
+
+Check the https://github.com/pyBinSim/AppExamples repository for ready-to-use demos.
+
+
+
+
 Reference:
 ----------
 
