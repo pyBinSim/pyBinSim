@@ -53,7 +53,7 @@ Config parameter description:
 -----------------------------
 
 soundfile: 
-    Defines *.wav file which is played back at startup. Sound file can contain up to maxChannels audio channels.
+    Defines \*.wav file which is played back at startup. Sound file can contain up to maxChannels audio channels.
 blockSize: 
     Number of samples which are processed per block. Low values reduce delay but increase cpu load.
 filterSize: 
