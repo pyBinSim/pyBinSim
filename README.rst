@@ -61,11 +61,11 @@ filterSize:
 maxChannels: 
     Maximum number of sound sources/audio channels which can be controlled during runtime.
 samplingRate: 
-    Sample rate for filters and soundfiles. Caution: Not automatic sample rate conversion.
+    Sample rate for filters and soundfiles. Caution: No automatic sample rate conversion.
 enableCrossfading: 
     Enable cross fade between audio blocks. Set 'False' or 'True'.
 useHeadphoneFilter: 
-    Eanbles headhpone equalization. The filterset should contain a filter with the identifier HPFILTER. Set 'False' or 'True'.
+    Enables headhpone equalization. The filterset should contain a filter with the identifier HPFILTER. Set 'False' or 'True'.
 loudnessFactor: 
     Factor for overall output loudness.
 
