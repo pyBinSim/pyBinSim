@@ -106,7 +106,7 @@ class Spark9dof(object):
         try:
             self.ser = serial.Serial(self.com_port, self.baudrate, timeout=1)
         except serial.SerialException as e:
-            raise RuntimeError(e.message)
+            raise RuntimeError(e)
 
     def get_sensor_data(self):
         """
@@ -118,7 +118,7 @@ class Spark9dof(object):
         readings, but only fragments.
         :return: Sensor reading as list of float.
         """
+        sensor_reading = self.ser.read_all()
+        reading_list = sensor_reading.decode().split("\r\n")
 
-        sensor_reading = self.ser.read_all().split("\n")
-
-        return parse_sensor_reading(sensor_reading)
+        return parse_sensor_reading(reading_list)
