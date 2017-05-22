@@ -20,7 +20,7 @@ Create ``pyBinSimSettings.txt`` file with content like this
 
 ::
 
-    soundfile signals/speech2_44100_mono.wav
+    soundfile signals/test.wav
     blockSize 256
     filterSize 16384
     filterList brirs/filter_list_kemar5.txt
