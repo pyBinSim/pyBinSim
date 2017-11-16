@@ -109,7 +109,7 @@ Reference:
 
 Please cite our work:
 
-Neidhardt, A.; Klein, F.; Knoop, N. and Köllmer, T., "Flexible Python tool for dyanmic binaural synthesis applications", 142nd AES Convention, Berlin, 2017.
+Neidhardt, A.; Klein, F.; Knoop, N. and Köllmer, T., "Flexible Python tool for dynamic binaural synthesis applications", 142nd AES Convention, Berlin, 2017.
 
 
 
