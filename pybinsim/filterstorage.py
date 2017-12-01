@@ -65,6 +65,25 @@ class FilterStorage(object):
         # Start to load filters
         self.load_filters()
 
+    def parse_filter_list(self):
+        """
+        Generator for filter list lines
+
+        Lines are assumed to have a format like
+        0 0 40 1 1 0 brirWav_APA/Ref_A01_1_040.wav
+
+        :return: Iterator of filter_value_list - filter-path tuples
+        """
+
+        for line in self.filter_list:
+
+            line_content = line.split()
+
+            filter_value_list = tuple(line_content[0:-1])
+            filter_path = line_content[-1]
+
+            yield (filter_value_list, filter_path,)
+
     def load_filters(self):
         """
         Load filters from files
@@ -74,21 +93,12 @@ class FilterStorage(object):
 
         self.log.info("Start loading filters")
 
-        for line in self.filter_list:
-            # Read line content
-            line_content = line.split()
-
-            filter_value_list = tuple(line_content[0:-1])
-            filter_path = line_content[-1]
-
-            # Extend value list to support older filter lists
-            # if (len(filter_value_list) < 6):
-            #   filter_value_list = (filter_value_list + (0,) * 6)[:6]
-            #    print("filter value list incomplete")
+        for filter_value_list, filter_path in self.parse_filter_list():
 
             # load filter
             print('Loading ' + filter_path)
-            # _,current_filter = read(os.path.join(os.path.dirname(__file__),filter_path))
+            self.log.info('Loading {}'.format(filter_path))
+
             _, current_filter = read(filter_path)
             current_filter = pcm2float(current_filter, 'float32')
             filter_size = np.shape(current_filter)
@@ -104,7 +114,6 @@ class FilterStorage(object):
             # create key and store in dict.
             key = self.create_key_from_values(filter_value_list)
             self.filter_dict.update({key: transformed_filter})
-
 
         self.log.info("Finished loading filters.")
         self.log.info("filter_dict size: {}MiB".format(total_size(self.filter_dict) // 1024 // 1024))
