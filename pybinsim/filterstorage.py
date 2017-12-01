@@ -21,12 +21,15 @@
 # SOFTWARE.
 
 import multiprocessing
+import logging
+import sys
 
 import numpy as np
 import pyfftw
 from scipy.io.wavfile import read
 
 from pybinsim.utility import pcm2float
+from pybinsim.utility import total_size
 
 nThreads = multiprocessing.cpu_count()
 
@@ -36,6 +39,9 @@ class FilterStorage(object):
 
     def __init__(self, irSize, block_size, filter_list_name):
         print('FilterStorage: init')
+
+        self.log = logging.getLogger("pybinsim.FilterStorage")
+        self.log.info("FilterStorage: init")
 
         self.ir_size = irSize
         self.ir_blocks = irSize // block_size
@@ -65,6 +71,9 @@ class FilterStorage(object):
 
         :return: None
         """
+
+        self.log.info("Start loading filters")
+
         for line in self.filter_list:
             # Read line content
             line_content = line.split()
@@ -95,6 +104,10 @@ class FilterStorage(object):
             # create key and store in dict.
             key = self.create_key_from_values(filter_value_list)
             self.filter_dict.update({key: transformed_filter})
+
+
+        self.log.info("Finished loading filters.")
+        self.log.info("filter_dict size: {}MiB".format(total_size(self.filter_dict) // 1024 // 1024))
 
     def transform_filter(self, filter):
         """
