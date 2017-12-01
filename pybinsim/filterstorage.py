@@ -20,17 +20,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import multiprocessing
 import logging
-import sys
+import multiprocessing
 
 import numpy as np
 import pyfftw
 from scipy.io.wavfile import read
 
+from pybinsim.pose import Pose
 from pybinsim.utility import pcm2float
 from pybinsim.utility import total_size
-from pybinsim.pose import Pose
 
 nThreads = multiprocessing.cpu_count()
 
@@ -39,7 +38,6 @@ class FilterStorage(object):
     """ Class for storing all filters mentioned in the filter list """
 
     def __init__(self, irSize, block_size, filter_list_name):
-        print('FilterStorage: init')
 
         self.log = logging.getLogger("pybinsim.FilterStorage")
         self.log.info("FilterStorage: init")
@@ -47,7 +45,7 @@ class FilterStorage(object):
         self.ir_size = irSize
         self.ir_blocks = irSize // block_size
         self.block_size = block_size
-        # self.filterListPath=os.path.join(os.path.dirname(__file__),filterListName)
+
         self.filter_list_path = filter_list_name
         self.filter_list = open(self.filter_list_path, 'r')
 
@@ -74,6 +72,10 @@ class FilterStorage(object):
 
         Lines are assumed to have a format like
         0 0 40 1 1 0 brirWav_APA/Ref_A01_1_040.wav
+
+        The headphone filter starts with HPFILTER instead of the positions.
+
+        Lines can be commented with a '#' as first character.
 
         :return: Iterator of (Pose, filter-path) tuples
         """
@@ -108,7 +110,6 @@ class FilterStorage(object):
         self.log.info("Start loading filters")
 
         for pose, filter_path in self.parse_filter_list():
-
             self.log.info('Loading {}'.format(filter_path))
 
             transformed_filter = self.get_transformed_filter(filter_path)
@@ -170,7 +171,7 @@ class FilterStorage(object):
                     self.default_filter[:, (self.block_size + 1):2 * (self.block_size + 1)])
 
     def close(self):
-        print('FilterStorage: close()')
+        self.log.info('FilterStorage: close()')
         # TODO: do something in here?
 
     def get_headphone_filter(self):
@@ -179,7 +180,6 @@ class FilterStorage(object):
 
         return (self.headphone_filter[:, 0:self.block_size + 1],
                 self.headphone_filter[:, (self.block_size + 1):2 * (self.block_size + 1)])
-
 
     def get_transformed_filter(self, filter_path):
 
