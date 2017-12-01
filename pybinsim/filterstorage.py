@@ -96,11 +96,13 @@ class FilterStorage(object):
         for filter_value_list, filter_path in self.parse_filter_list():
 
             # load filter
-            print('Loading ' + filter_path)
             self.log.info('Loading {}'.format(filter_path))
 
-            _, current_filter = read(filter_path)
-            current_filter = pcm2float(current_filter, 'float32')
+            _, current_filter_pcm = read(filter_path)
+
+            # doubles size (int16 -> float32)
+            current_filter = pcm2float(current_filter_pcm, 'float32')
+
             filter_size = np.shape(current_filter)
 
             # Fill filter with zeros if to short
@@ -109,6 +111,7 @@ class FilterStorage(object):
                 current_filter = np.concatenate((current_filter, np.zeros((self.ir_size - filter_size[0], 2))), 0)
 
             # Transform filter to freq domain before storing
+            # doubles size in RAM (float32 -> complex64)
             transformed_filter = self.transform_filter(current_filter)
 
             # create key and store in dict.
@@ -143,7 +146,7 @@ class FilterStorage(object):
             TF_left_blocked[ir_block_count] = self.fftw_plan(IR_left_blocked[ir_block_count])
             TF_right_blocked[ir_block_count] = self.fftw_plan(IR_right_blocked[ir_block_count])
 
-        # Concatenate left an right filter for storage
+        # Concatenate left and right filter for storage
         transformed_filter = np.concatenate((TF_left_blocked, TF_right_blocked), axis=1)
         return transformed_filter
 
