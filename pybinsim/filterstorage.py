@@ -30,6 +30,7 @@ from scipy.io.wavfile import read
 
 from pybinsim.utility import pcm2float
 from pybinsim.utility import total_size
+from pybinsim.pose import Pose
 
 nThreads = multiprocessing.cpu_count()
 
@@ -49,6 +50,8 @@ class FilterStorage(object):
         # self.filterListPath=os.path.join(os.path.dirname(__file__),filterListName)
         self.filter_list_path = filter_list_name
         self.filter_list = open(self.filter_list_path, 'r')
+
+        self.headphone_filter = None
 
         # Filter format: [nBlocks,blockSize*4]
         # 0 to blockSize*2: left filter
@@ -72,7 +75,7 @@ class FilterStorage(object):
         Lines are assumed to have a format like
         0 0 40 1 1 0 brirWav_APA/Ref_A01_1_040.wav
 
-        :return: Iterator of filter_value_list - filter-path tuples
+        :return: Iterator of (Pose, filter-path) tuples
         """
 
         for line in self.filter_list:
@@ -82,11 +85,18 @@ class FilterStorage(object):
                 continue
 
             line_content = line.split()
-
-            filter_value_list = tuple(line_content[0:-1])
             filter_path = line_content[-1]
 
-            yield (filter_value_list, filter_path,)
+            if line.startswith('HPFILTER'):
+                self.log.info("Loading headphone filter: {}".format(filter_path))
+                self.headphone_filter = self.get_transformed_filter(filter_path)
+                continue
+
+            filter_value_list = tuple(line_content[0:-1])
+
+            pose = Pose.from_filterValueList(filter_value_list)
+
+            yield pose, filter_path
 
     def load_filters(self):
         """
@@ -97,29 +107,14 @@ class FilterStorage(object):
 
         self.log.info("Start loading filters")
 
-        for filter_value_list, filter_path in self.parse_filter_list():
+        for pose, filter_path in self.parse_filter_list():
 
-            # load filter
             self.log.info('Loading {}'.format(filter_path))
 
-            _, current_filter_pcm = read(filter_path)
-
-            # doubles size (int16 -> float32)
-            current_filter = pcm2float(current_filter_pcm, 'float32')
-
-            filter_size = np.shape(current_filter)
-
-            # Fill filter with zeros if to short
-            if filter_size[0] < self.ir_size:
-                print('Filter to short: Fill up with zeros')
-                current_filter = np.concatenate((current_filter, np.zeros((self.ir_size - filter_size[0], 2))), 0)
-
-            # Transform filter to freq domain before storing
-            # doubles size in RAM (float32 -> complex64)
-            transformed_filter = self.transform_filter(current_filter)
+            transformed_filter = self.get_transformed_filter(filter_path)
 
             # create key and store in dict.
-            key = self.create_key_from_values(filter_value_list)
+            key = pose.create_key()
             self.filter_dict.update({key: transformed_filter})
 
         self.log.info("Finished loading filters.")
@@ -154,16 +149,16 @@ class FilterStorage(object):
         transformed_filter = np.concatenate((TF_left_blocked, TF_right_blocked), axis=1)
         return transformed_filter
 
-    def get_filter(self, filter_value_list):
+    def get_filter(self, pose):
         """
         Searches in the dict if key is available and return corresponding filter
         When no filter is found, defaultFilter is returned which results in silence
 
-        :param filter_value_list:
-        :return: corresponding filter for key
+        :param pose
+        :return: corresponding filter for pose
         """
 
-        key = self.create_key_from_values(filter_value_list)
+        key = pose.create_key()
 
         if key in self.filter_dict:
             self.log.info('Filter found: key: {}'.format(key))
@@ -174,16 +169,34 @@ class FilterStorage(object):
             return (self.default_filter[:, 0:self.block_size + 1],
                     self.default_filter[:, (self.block_size + 1):2 * (self.block_size + 1)])
 
-    def create_key_from_values(self, filter_value_list):
-        """
-        Just create the key
-
-        :param filter_value_list:
-        :return: key created from filter_value_list
-        """
-        key = ','.join(map(str, filter_value_list))
-        return key
-
     def close(self):
         print('FilterStorage: close()')
         # TODO: do something in here?
+
+    def get_headphone_filter(self):
+        if self.headphone_filter is None:
+            raise RuntimeError("Headphone filter not loaded")
+
+        return (self.headphone_filter[:, 0:self.block_size + 1],
+                self.headphone_filter[:, (self.block_size + 1):2 * (self.block_size + 1)])
+
+
+    def get_transformed_filter(self, filter_path):
+
+        _, current_filter_pcm = read(filter_path)
+
+        # doubles size (int16 -> float32)
+        current_filter = pcm2float(current_filter_pcm, 'float32')
+
+        filter_size = np.shape(current_filter)
+
+        # Fill filter with zeros if to short
+        if filter_size[0] < self.ir_size:
+            print('Filter to short: Fill up with zeros')
+            current_filter = np.concatenate((current_filter, np.zeros((self.ir_size - filter_size[0], 2))), 0)
+
+        # Transform filter to freq domain before storing
+        # doubles size in RAM (float32 -> complex64)
+        transformed_filter = self.transform_filter(current_filter)
+
+        return transformed_filter

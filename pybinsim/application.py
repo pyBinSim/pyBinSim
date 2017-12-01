@@ -29,6 +29,7 @@ import pyaudio
 from pybinsim.convolver import ConvolverFFTW
 from pybinsim.filterstorage import FilterStorage
 from pybinsim.osc_receiver import OscReceiver
+from pybinsim.pose import Pose
 from pybinsim.soundhandler import SoundHandler
 
 
@@ -133,7 +134,7 @@ class BinSim(object):
         convolverHP = None
         if self.config.get('useHeadphoneFilter') == 'True':
             convolverHP = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), True)
-            left, right = filterStorage.get_filter(['HPFILTER'])
+            left, right = filterStorage.get_headphone_filter()
             convolverHP.setIR(left, right, False)
 
         return convolverHP, convolvers, filterStorage, oscReceiver, soundHandler
@@ -185,7 +186,7 @@ def audio_callback(binsim):
             if binsim.oscReceiver.is_filter_update_necessary(n):
                 # print('Updating Filter')
                 filterValueList = binsim.oscReceiver.get_current_values(n)
-                leftFilter, rightFilter = binsim.filterStorage.get_filter(filterValueList)
+                leftFilter, rightFilter = binsim.filterStorage.get_filter(Pose.from_filterValueList(filterValueList))
                 binsim.convolvers[n].setIR(leftFilter, rightFilter, callback.config.get('enableCrossfading'))
 
             left, right = binsim.convolvers[n].process(binsim.block[n, :])
