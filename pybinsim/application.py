@@ -34,6 +34,7 @@ from pybinsim.pose import Pose
 from pybinsim.soundhandler import SoundHandler
 
 
+
 class BinSimConfig(object):
     def __init__(self):
 
@@ -111,6 +112,7 @@ class BinSim(object):
 
     def initialize_pybinsim(self):
 
+
         self.result = np.empty([self.config.get('blockSize'), 2], np.dtype(np.float32))
         self.block = np.empty([self.config.get('maxChannels'), self.config.get('blockSize')], np.dtype(np.float32))
 
@@ -126,7 +128,9 @@ class BinSim(object):
         # Create SoundHandler
         soundHandler = SoundHandler(self.config.get('blockSize'), self.config.get('maxChannels'),
                                     self.config.get('samplingRate'))
-        soundHandler.request_new_sound_file([self.config.get('soundfile')])
+
+        soundfile_list = [self.config.get('soundfile')]
+        soundHandler.request_new_sound_file(soundfile_list)
 
         # Create N convolvers depending on the number of wav channels
         self.log.info('Number of Channels: ' + str(self.config.get('maxChannels')))
