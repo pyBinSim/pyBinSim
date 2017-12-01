@@ -22,6 +22,7 @@
 
 import multiprocessing
 
+import logging
 import numpy as np
 import pyfftw
 from past.builtins import xrange
@@ -36,7 +37,10 @@ class ConvolverFFTW(object):
     """
 
     def __init__(self, ir_size, block_size, process_stereo):
-        print("Convolver: init")
+
+        self.log = logging.getLogger("pybinsim.ConvolverFFTW")
+        self.log.info("Convolver: init")
+
         # Get Basic infos
         self.IR_size = ir_size
         self.block_size = block_size
@@ -178,7 +182,7 @@ class ConvolverFFTW(object):
 
         if block.size < self.block_size:
             # print('Fill up last block')
-            print(np.shape(block))
+            # print(np.shape(block))
             block = np.concatenate((block, np.zeros(((self.block_size - block.size), 2))), 0)
 
         if self.processCounter == 0:

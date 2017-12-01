@@ -22,6 +22,7 @@
 
 """ Module contains main loop and configuration of pyBinSim """
 import time
+import logging
 
 import numpy as np
 import pyaudio
@@ -35,6 +36,8 @@ from pybinsim.soundhandler import SoundHandler
 
 class BinSimConfig(object):
     def __init__(self):
+
+        self.log = logging.getLogger("pybinsim.BinSimConfig")
 
         # Default Configuration
         self.configurationDict = {'soundfile': '',
@@ -56,7 +59,7 @@ class BinSimConfig(object):
             if key in self.configurationDict:
                 self.configurationDict[key] = type(self.configurationDict[key])(line_content[1])
             else:
-                print('Entry ' + key + ' is unknown')
+                self.log.warning('Entry ' + key + ' is unknown')
 
     def get(self, setting):
         return self.configurationDict[setting]
@@ -68,7 +71,9 @@ class BinSim(object):
     """
 
     def __init__(self, config_file):
-        print("BinSim: init")
+
+        self.log = logging.getLogger("pybinsim.BinSim")
+        self.log.info("BinSim: init")
 
         # Read Configuration File
         self.config = BinSimConfig()
@@ -94,7 +99,7 @@ class BinSim(object):
         self.__cleanup()
 
     def stream_start(self):
-        print("BinSim: stream_start")
+        self.log.info("BinSim: stream_start")
         self.stream = self.p.open(format=pyaudio.paFloat32, channels=2,
                                   rate=self.sampleRate, output=True,
                                   frames_per_buffer=self.blockSize,
@@ -110,7 +115,6 @@ class BinSim(object):
         self.block = np.empty([self.config.get('maxChannels'), self.config.get('blockSize')], np.dtype(np.float32))
 
         # Create FilterStorage
-        print(type(self.config.get('blockSize')))
         filterStorage = FilterStorage(self.config.get('filterSize'), self.config.get('blockSize'),
                                       self.config.get('filterList'))
 
@@ -125,7 +129,7 @@ class BinSim(object):
         soundHandler.request_new_sound_file([self.config.get('soundfile')])
 
         # Create N convolvers depending on the number of wav channels
-        print('Number of Channels: ' + str(self.config.get('maxChannels')))
+        self.log.info('Number of Channels: ' + str(self.config.get('maxChannels')))
         convolvers = [None] * self.config.get('maxChannels')
         for n in range(self.config.get('maxChannels')):
             convolvers[n] = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), False)
@@ -140,12 +144,12 @@ class BinSim(object):
         return convolverHP, convolvers, filterStorage, oscReceiver, soundHandler
 
     def close(self):
-        print("BinSim: close")
+        self.log.info("BinSim: close")
         self.stream_close()
         self.p.terminate()
 
     def stream_close(self):
-        print("BinSim: stream_close")
+        self.log.info("BinSim: stream_close")
         self.stream.stop_stream()
         self.stream.close()
 

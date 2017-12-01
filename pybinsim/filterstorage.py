@@ -107,10 +107,10 @@ class FilterStorage(object):
         :return: None
         """
 
-        self.log.info("Start loading filters")
+        self.log.info("Start loading filters...")
 
-        for pose, filter_path in self.parse_filter_list():
-            self.log.info('Loading {}'.format(filter_path))
+        for i, (pose, filter_path) in enumerate(self.parse_filter_list()):
+            self.log.debug('Loading {}'.format(filter_path))
 
             transformed_filter = self.get_transformed_filter(filter_path)
 
@@ -192,7 +192,7 @@ class FilterStorage(object):
 
         # Fill filter with zeros if to short
         if filter_size[0] < self.ir_size:
-            print('Filter to short: Fill up with zeros')
+            self.log.warning('Filter to short: Fill up with zeros')
             current_filter = np.concatenate((current_filter, np.zeros((self.ir_size - filter_size[0], 2))), 0)
 
         # Transform filter to freq domain before storing

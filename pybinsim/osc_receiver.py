@@ -22,6 +22,7 @@
 
 import threading
 
+import logging
 from pythonosc import dispatcher
 from pythonosc import osc_server
 
@@ -32,7 +33,9 @@ class OscReceiver(object):
     """
 
     def __init__(self):
-        print("oscReceiver: init")
+
+        self.log = logging.getLogger("pybinsim.OscReceiver")
+        self.log.info("oscReceiver: init")
 
         # Basic settings
         self.ip = '127.0.0.1'
@@ -79,17 +82,17 @@ class OscReceiver(object):
         #    args=(args+(0,)*6)[:6]
         #    print("filter value list incomplete")
 
-        print("Channel: {}".format(str(channel)))
-        print("Args: {}".format(str(args)))
+        self.log.info("Channel: {}".format(str(channel)))
+        self.log.info("Args: {}".format(str(args)))
 
         current_channel = channel
 
         if args != self.valueList[current_channel]:
-            print("new filter")
+            self.log.info("new filter")
             self.filters_updated[current_channel] = True
             self.valueList[current_channel] = tuple(args)
         else:
-            print("same filter as before")
+            self.log.info("same filter as before")
 
     def handle_file_input(self, identifier, soundpath):
         """ Handler for playlist control"""
@@ -97,13 +100,13 @@ class OscReceiver(object):
         assert identifier == "/pyBinSimFile"
         # assert type(soundpath) == 'str'
 
-        print("soundPath: {}".format(soundpath))
+        self.log.info("soundPath: {}".format(soundpath))
         self.soundFileList.append(soundpath)
 
     def start_listening(self):
         """Start osc receiver in background Thread"""
 
-        print("Serving on {}".format(self.server.server_address))
+        self.log.info("Serving on {}".format(self.server.server_address))
 
         osc_thread = threading.Thread(target=self.server.serve_forever)
         osc_thread.daemon = True
@@ -129,5 +132,5 @@ class OscReceiver(object):
 
         :return: None
         """
-        print('oscReiver: close()')
+        self.log.info('oscReiver: close()')
         self.server.shutdown()
