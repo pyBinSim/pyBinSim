@@ -77,6 +77,10 @@ class FilterStorage(object):
 
         for line in self.filter_list:
 
+            # comment out lines in the list with a '#'
+            if line.startswith('#'):
+                continue
+
             line_content = line.split()
 
             filter_value_list = tuple(line_content[0:-1])
@@ -162,11 +166,11 @@ class FilterStorage(object):
         key = self.create_key_from_values(filter_value_list)
 
         if key in self.filter_dict:
-            print('Filter found: key: ' + key)
+            self.log.info('Filter found: key: {}'.format(key))
             return (self.filter_dict.get(key)[:, 0:self.block_size + 1],
                     self.filter_dict.get(key)[:, (self.block_size + 1):2 * (self.block_size + 1)])
         else:
-            print('Filter not found; key: ' + key)
+            self.log.warning('Filter not found: key: {}'.format(key))
             return (self.default_filter[:, 0:self.block_size + 1],
                     self.default_filter[:, (self.block_size + 1):2 * (self.block_size + 1)])
 
