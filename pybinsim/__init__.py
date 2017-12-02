@@ -21,4 +21,4 @@ def init_logging(loglevel):
     return logger
 
 
-logger = init_logging(logging.DEBUG)
+logger = init_logging(logging.INFO)
