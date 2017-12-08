@@ -24,11 +24,9 @@ import logging
 import multiprocessing
 
 import numpy as np
-import pyfftw
-from scipy.io.wavfile import read
+import soundfile as sf
 
 from pybinsim.pose import Pose
-from pybinsim.utility import pcm2float
 from pybinsim.utility import total_size
 
 nThreads = multiprocessing.cpu_count()
@@ -45,22 +43,14 @@ class FilterStorage(object):
         self.ir_size = irSize
         self.ir_blocks = irSize // block_size
         self.block_size = block_size
+        self.default_filter = np.zeros((self.ir_size, 2), dtype='float32')
 
         self.filter_list_path = filter_list_name
         self.filter_list = open(self.filter_list_path, 'r')
 
         self.headphone_filter = None
 
-        # Filter format: [nBlocks,blockSize*4]
-        # 0 to blockSize*2: left filter
-        # blockSize*2 to blockSize*4: right filter
-        self.default_filter = np.zeros([self.ir_blocks, 2 * (block_size + 1)], np.dtype(np.float32))
-
-        self.fftw_plan = pyfftw.builders.rfft(np.zeros(block_size * 2), overwrite_input=True,
-                                              planner_effort='FFTW_MEASURE',
-                                              threads=nThreads)
-
-        # format: [key,{filterLeft,filterRight}]
+        # format: [key,{filter}]
         self.filter_dict = {}
 
         # Start to load filters
@@ -91,7 +81,7 @@ class FilterStorage(object):
 
             if line.startswith('HPFILTER'):
                 self.log.info("Loading headphone filter: {}".format(filter_path))
-                self.headphone_filter = self.get_transformed_filter(filter_path)
+                self.headphone_filter = self.load_filter(filter_path)
                 continue
 
             filter_value_list = tuple(line_content[0:-1])
@@ -112,43 +102,14 @@ class FilterStorage(object):
         for i, (pose, filter_path) in enumerate(self.parse_filter_list()):
             self.log.debug('Loading {}'.format(filter_path))
 
-            transformed_filter = self.get_transformed_filter(filter_path)
+            filter = self.load_filter(filter_path)
 
             # create key and store in dict.
             key = pose.create_key()
-            self.filter_dict.update({key: transformed_filter})
+            self.filter_dict.update({key: filter})
 
         self.log.info("Finished loading filters.")
         self.log.info("filter_dict size: {}MiB".format(total_size(self.filter_dict) // 1024 // 1024))
-
-    def transform_filter(self, filter):
-        """
-        Transform filter to freq domain
-
-        :param filter:
-        :return: transformed filter
-        """
-        IR_left = filter[:, 0]
-        IR_right = filter[:, 1]
-
-        # Split IRs in blocks
-        IR_left_blocked = np.reshape(IR_left, (self.ir_blocks, self.block_size))
-        IR_right_blocked = np.reshape(IR_right, (self.ir_blocks, self.block_size))
-
-        # Add zeroes to each block
-        IR_left_blocked = np.concatenate((IR_left_blocked, np.zeros([self.ir_blocks, self.block_size])), axis=1)
-        IR_right_blocked = np.concatenate((IR_right_blocked, np.zeros([self.ir_blocks, self.block_size])), axis=1)
-
-        TF_left_blocked = np.zeros([self.ir_blocks, self.block_size + 1], np.dtype(np.complex64))
-        TF_right_blocked = np.zeros([self.ir_blocks, self.block_size + 1], np.dtype(np.complex64))
-
-        for ir_block_count in range(0, self.ir_blocks):
-            TF_left_blocked[ir_block_count] = self.fftw_plan(IR_left_blocked[ir_block_count])
-            TF_right_blocked[ir_block_count] = self.fftw_plan(IR_right_blocked[ir_block_count])
-
-        # Concatenate left and right filter for storage
-        transformed_filter = np.concatenate((TF_left_blocked, TF_right_blocked), axis=1)
-        return transformed_filter
 
     def get_filter(self, pose):
         """
@@ -163,12 +124,10 @@ class FilterStorage(object):
 
         if key in self.filter_dict:
             self.log.info('Filter found: key: {}'.format(key))
-            return (self.filter_dict.get(key)[:, 0:self.block_size + 1],
-                    self.filter_dict.get(key)[:, (self.block_size + 1):2 * (self.block_size + 1)])
+            return self.filter_dict.get(key)
         else:
             self.log.warning('Filter not found: key: {}'.format(key))
-            return (self.default_filter[:, 0:self.block_size + 1],
-                    self.default_filter[:, (self.block_size + 1):2 * (self.block_size + 1)])
+            return self.default_filter
 
     def close(self):
         self.log.info('FilterStorage: close()')
@@ -178,15 +137,11 @@ class FilterStorage(object):
         if self.headphone_filter is None:
             raise RuntimeError("Headphone filter not loaded")
 
-        return (self.headphone_filter[:, 0:self.block_size + 1],
-                self.headphone_filter[:, (self.block_size + 1):2 * (self.block_size + 1)])
+        return self.headphone_filter
 
-    def get_transformed_filter(self, filter_path):
+    def load_filter(self, filter_path):
 
-        _, current_filter_pcm = read(filter_path)
-
-        # doubles size (int16 -> float32)
-        current_filter = pcm2float(current_filter_pcm, 'float32')
+        current_filter, fs = sf.read(filter_path, dtype='float32')
 
         filter_size = np.shape(current_filter)
 
@@ -195,8 +150,4 @@ class FilterStorage(object):
             self.log.warning('Filter to short: Fill up with zeros')
             current_filter = np.concatenate((current_filter, np.zeros((self.ir_size - filter_size[0], 2))), 0)
 
-        # Transform filter to freq domain before storing
-        # doubles size in RAM (float32 -> complex64)
-        transformed_filter = self.transform_filter(current_filter)
-
-        return transformed_filter
+        return current_filter
