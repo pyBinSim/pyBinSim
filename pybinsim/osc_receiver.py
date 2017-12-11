@@ -48,7 +48,7 @@ class OscReceiver(object):
         self.defaultValue = (0, 0, 0, 0, 0, 0)
         self.valueList = [self.defaultValue] * self.maxChannels
         # self.valueList = [()] * self.maxChannels
-        self.soundFileList = []
+        self.soundFileList = ''
         self.soundFileNew = False
 
         osc_dispatcher = dispatcher.Dispatcher()
@@ -101,7 +101,7 @@ class OscReceiver(object):
         # assert type(soundpath) == 'str'
 
         self.log.info("soundPath: {}".format(soundpath))
-        self.soundFileList.append(soundpath)
+        self.soundFileList=soundpath
 
     def start_listening(self):
         """Start osc receiver in background Thread"""
@@ -123,7 +123,7 @@ class OscReceiver(object):
 
     def get_sound_file_list(self):
         ret_list = self.soundFileList
-        self.soundFileList = []
+        self.soundFileList = ''
         return ret_list
 
     def close(self):

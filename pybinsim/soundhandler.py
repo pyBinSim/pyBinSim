@@ -30,7 +30,7 @@ import soundfile as sf
 
 class SoundHandler(object):
     """ Class to read audio from files and serve it to pyBinSim """
-    def __init__(self, block_size, n_channels, fs):
+    def __init__(self, block_size, n_channels, fs, loopSound):
 
         self.log = logging.getLogger("pybinsim.SoundHandler")
 
@@ -46,6 +46,9 @@ class SoundHandler(object):
         self.soundPath = ''
         self.new_sound_file_request = False
         self.new_sound_file_loaded = False
+        self.loopSound = loopSound
+        self.currentSoundFile = 1
+        self.soundFileList = []
 
         self._run_file_reader()
 
@@ -61,6 +64,12 @@ class SoundHandler(object):
                                                                     self.frame_count * self.chunk_size: (self.frame_count + 1) * self.chunk_size
                                                                     ]
             self.frame_count += 1
+        elif self.currentSoundFile<len(self.soundFileList) and not self.new_sound_file_request:
+            self.request_next_sound_file()
+        elif self.loopSound == 'True' and not self.new_sound_file_request:
+            self.currentSoundFile=0
+            self.request_next_sound_file()
+            self.frame_count = 0
         else:
             self.buffer_add_silence()
 
@@ -87,7 +96,6 @@ class SoundHandler(object):
         while True:
             if self.new_sound_file_request:
                 self.log.info('Loading new sound file')
-
                 audio_file_data, fs = sf.read(self.soundPath,dtype='float32',)
                 assert fs == self.fs
 
@@ -120,13 +128,22 @@ class SoundHandler(object):
                     self.log.info('Loaded new sound file\n')
                 self.new_sound_file_request = False
                 self.new_sound_file_loaded = True
-            time.sleep(0.5)
+            time.sleep(0.05)
 
     def request_new_sound_file(self, sound_file_list):
-        # TODO: process whole list
-        self.soundPath = sound_file_list[0]
 
+        sound_file_list=str.split(sound_file_list,'#')
+        self.soundPath = sound_file_list[0]
+        self.soundFileList = sound_file_list
+        self.currentSoundFile=1
         self.new_sound_file_request = True
+
+    def request_next_sound_file(self):
+
+        self.currentSoundFile +=1
+        self.soundPath = self.soundFileList[self.currentSoundFile-1]
+        self.new_sound_file_request = True
+
 
     def get_sound_channels(self):
         return self.active_channels

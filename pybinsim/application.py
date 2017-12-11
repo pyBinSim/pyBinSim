@@ -49,7 +49,8 @@ class BinSimConfig(object):
                                   'useHeadphoneFilter': 'False',
                                   'loudnessFactor': float(1),
                                   'maxChannels': 8,
-                                  'samplingRate': 44100}
+                                  'samplingRate': 44100,
+                                  'loopSound': 'True'}
 
     def read_from_file(self, filepath):
         config = open(filepath, 'r')
@@ -127,9 +128,9 @@ class BinSim(object):
 
         # Create SoundHandler
         soundHandler = SoundHandler(self.config.get('blockSize'), self.config.get('maxChannels'),
-                                    self.config.get('samplingRate'))
+                                    self.config.get('samplingRate'), self.config.get('loopSound'))
 
-        soundfile_list = [self.config.get('soundfile')]
+        soundfile_list = self.config.get('soundfile')
         soundHandler.request_new_sound_file(soundfile_list)
 
         # Create N convolvers depending on the number of wav channels
