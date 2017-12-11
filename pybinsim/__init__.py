@@ -1,8 +1,7 @@
 import logging
 
 
-def __version__():
-    return "1.0.1"
+__version__ = "1.1.0"
 
 from pybinsim.application import BinSim
 
