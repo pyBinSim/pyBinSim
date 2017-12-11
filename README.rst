@@ -9,7 +9,7 @@ Install
 
 ::
 
-    $ conda create --name binsim35 python=3.5 numpy scipy
+    $ conda create --name binsim35 python=3.5 numpy
     $ source activate binsim35
     $ pip install pybinsim
     
@@ -35,6 +35,7 @@ Create ``pyBinSimSettings.txt`` file with content like this
     enableCrossfading False
     useHeadphoneFilter False
     loudnessFactor 1
+    loopSound False
 
 
 Start Binaural Simulation
@@ -42,6 +43,9 @@ Start Binaural Simulation
 ::
 
     import pybinsim
+    import logging
+
+    pybinsim.logger.setLevel(logging.DEBUG)    # defaults to INFO
 
     with pybinsim.BinSim('pyBinSimSettings.txt') as binsim:
         binsim.stream_start()
@@ -59,13 +63,13 @@ Config parameter description:
 -----------------------------
 
 soundfile: 
-    Defines \*.wav file which is played back at startup. Sound file can contain up to maxChannels audio channels.
+    Defines \*.wav file which is played back at startup. Sound file can contain up to maxChannels audio channels. Also accepts multiple files separated by '#'; Example: 'soundfile signals/sound1.wav#signals/sound2.wav
 blockSize: 
     Number of samples which are processed per block. Low values reduce delay but increase cpu load.
 filterSize: 
     Defines filter size of the filters loaded with the filter list. Filter size should be a mutltiple of blockSize.
 maxChannels: 
-    Maximum number of sound sources/audio channels which can be controlled during runtime.
+    Maximum number of sound sources/audio channels which can be controlled during runtime. The value for maxChannels must match or exceed the number of channels of soundFile(s).
 samplingRate: 
     Sample rate for filters and soundfiles. Caution: No automatic sample rate conversion.
 enableCrossfading: 
@@ -73,7 +77,10 @@ enableCrossfading:
 useHeadphoneFilter: 
     Enables headhpone equalization. The filterset should contain a filter with the identifier HPFILTER. Set 'False' or 'True'.
 loudnessFactor: 
-    Factor for overall output loudness.
+    Factor for overall output loudness. Attention: Clipping may occur
+loopSound:
+    Enables looping of sound file or sound file list. Set 'False' or 'True'.
+
 
 OSC Messages and filter lists:
 ------------------------------
@@ -91,7 +98,13 @@ When you want to play another sound file you send:
 
 ::
 
-    /pyBinSimFile file_new.wav
+    /pyBinSimFile folder/file_new.wav
+
+Or a sound file list
+
+::
+
+    /pyBinSimFile folder/file_1.wav#folder/file_2.wav
 
 The audiofile has to be located on the pc where pyBinSim runs. Files are not transmitted over network.
 

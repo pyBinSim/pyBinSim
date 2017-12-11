@@ -23,13 +23,17 @@
 import threading
 import time
 
+import logging
 import numpy as np
 import soundfile as sf
 
 
 class SoundHandler(object):
     """ Class to read audio from files and serve it to pyBinSim """
-    def __init__(self, block_size, n_channels, fs):
+    def __init__(self, block_size, n_channels, fs, loopSound):
+
+        self.log = logging.getLogger("pybinsim.SoundHandler")
+
         self.fs = fs
         self.n_channels = n_channels
         self.chunk_size = block_size
@@ -42,6 +46,9 @@ class SoundHandler(object):
         self.soundPath = ''
         self.new_sound_file_request = False
         self.new_sound_file_loaded = False
+        self.loopSound = loopSound
+        self.currentSoundFile = 1
+        self.soundFileList = []
 
         self._run_file_reader()
 
@@ -57,6 +64,12 @@ class SoundHandler(object):
                                                                     self.frame_count * self.chunk_size: (self.frame_count + 1) * self.chunk_size
                                                                     ]
             self.frame_count += 1
+        elif self.currentSoundFile<len(self.soundFileList) and not self.new_sound_file_request:
+            self.request_next_sound_file()
+        elif self.loopSound == 'True' and not self.new_sound_file_request:
+            self.currentSoundFile=0
+            self.request_next_sound_file()
+            self.frame_count = 0
         else:
             self.buffer_add_silence()
 
@@ -82,13 +95,15 @@ class SoundHandler(object):
 
         while True:
             if self.new_sound_file_request:
-                print('Loading new sound file')
-                # fs, audio_file_data = read(self.soundPath)
+                self.log.info('Loading new sound file')
                 audio_file_data, fs = sf.read(self.soundPath,dtype='float32',)
                 assert fs == self.fs
 
-                # audio_file_data = pcm2float(audio_file_data, 'float32')
+                self.log.debug("audio_file_data: {} MB".format(audio_file_data.nbytes // 1024 // 1024))
                 self.sound_file = np.asmatrix(audio_file_data)
+
+                # free data
+                audio_file_data = None
 
                 if self.sound_file.shape[0] > self.sound_file.shape[1]:
                     self.sound_file = self.sound_file.transpose()
@@ -96,20 +111,39 @@ class SoundHandler(object):
                 self.active_channels = self.sound_file.shape[0]
 
                 if self.sound_file.shape[1] % self.chunk_size != 0:
+
                     length_diff = self.chunk_size - (self.sound_file.shape[1] % self.chunk_size)
+                    zeros = np.zeros((self.sound_file.shape[0], length_diff), dtype=np.float32)
+
+                    self.log.debug("Zeros size: {} Byte".format(zeros.nbytes))
+                    self.log.debug("Zeros shape: {} ({})".format(zeros.shape, zeros.dtype))
+                    self.log.debug("Soundfile size: {} MiB".format(self.sound_file.nbytes // 1024 // 1024))
+                    self.log.debug("Soundfile shape: {} ({})".format(self.sound_file.shape, self.sound_file.dtype))
                     self.sound_file = np.concatenate(
-                        (self.sound_file, np.zeros((self.sound_file.shape[0], length_diff))), 1
+                        (self.sound_file, zeros),
+                        1
                     )
-                print('Loaded new sound file\n')
+                    self.log.debug("Soundfile size after concat: {} MiB".format(self.sound_file.nbytes // 1024 // 1024))
+                    self.log.debug("Soundfile shape after concat: {} ({})".format(self.sound_file.shape, self.sound_file.dtype))
+                    self.log.info('Loaded new sound file\n')
                 self.new_sound_file_request = False
                 self.new_sound_file_loaded = True
-            time.sleep(0.5)
+            time.sleep(0.05)
 
-    def request_new_sound_file(self, soundpathlist):
-        # TODO: process whole list
-        self.soundPath = soundpathlist[0]
+    def request_new_sound_file(self, sound_file_list):
 
+        sound_file_list=str.split(sound_file_list,'#')
+        self.soundPath = sound_file_list[0]
+        self.soundFileList = sound_file_list
+        self.currentSoundFile=1
         self.new_sound_file_request = True
+
+    def request_next_sound_file(self):
+
+        self.currentSoundFile +=1
+        self.soundPath = self.soundFileList[self.currentSoundFile-1]
+        self.new_sound_file_request = True
+
 
     def get_sound_channels(self):
         return self.active_channels

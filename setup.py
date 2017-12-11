@@ -4,7 +4,7 @@ import sys
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
-VERSION = "1.0.1"
+VERSION = "1.1.0"
 
 class PyTest(TestCommand):
     user_options = [('pytest-args=', 'a', "Arguments to pass to pytest")]
@@ -38,7 +38,6 @@ setup(
         "pyserial >= 3.2.1",
         "pytest >= 3.0.5",
         "python-osc >= 1.6.3",
-        "scipy >= 0.19.0",
         "six >= 1.10.0",
         "Soundfile >= 0.9.0",
     ],

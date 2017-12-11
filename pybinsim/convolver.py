@@ -22,6 +22,7 @@
 
 import multiprocessing
 
+import logging
 import numpy as np
 import pyfftw
 from past.builtins import xrange
@@ -36,7 +37,10 @@ class ConvolverFFTW(object):
     """
 
     def __init__(self, ir_size, block_size, process_stereo):
-        print("Convolver: init")
+
+        self.log = logging.getLogger("pybinsim.ConvolverFFTW")
+        self.log.info("Convolver: init")
+
         # Get Basic infos
         self.IR_size = ir_size
         self.block_size = block_size
@@ -51,6 +55,17 @@ class ConvolverFFTW(object):
         # float division in python 2 & 3
         self.crossFadeIn *= 1 / float((self.block_size - 1))
         self.crossFadeOut[:] = np.flipud(self.crossFadeIn)
+
+        # Create default filter and fftw plan
+        # Filter format: [nBlocks,blockSize*4]
+        # 0 to blockSize*2: left filter
+        # blockSize*2 to blockSize*4: right filter
+        self.default_filter = pyfftw.zeros_aligned([self.IR_blocks, 2 * (self.block_size + 1)], np.dtype(np.float32))
+
+        self.filter_fftw_plan = pyfftw.builders.rfft(np.zeros(self.block_size * 2), overwrite_input=True,
+                                              planner_effort='FFTW_MEASURE',
+                                              threads=nThreads)
+
 
         # Create Input Buffers and create fftw plans
         self.buffer = pyfftw.zeros_aligned(self.block_size * 2, dtype='float32')
@@ -71,7 +86,7 @@ class ConvolverFFTW(object):
         self.FDL_left = pyfftw.zeros_aligned(self.IR_blocks * (self.block_size + 1), dtype='complex64')
         self.FDL_right = pyfftw.zeros_aligned(self.IR_blocks * (self.block_size + 1), dtype='complex64')
 
-        # Arrays for the result of the complex multipla and add
+        # Arrays for the result of the complex multiply and add
         # These should be memory aligned because ifft is performed with these data
         self.resultLeftFreq = pyfftw.zeros_aligned(self.block_size + 1, dtype='complex64')
         self.resultRightFreq = pyfftw.zeros_aligned(self.block_size + 1, dtype='complex64')
@@ -110,25 +125,50 @@ class ConvolverFFTW(object):
         """
         return self.processCounter
 
-    def setIR(self, left_filter, right_filter, do_interpolation):
+    def transform_filter(self, filter):
+        """
+        Transform filter to freq domain
+
+        :param filter:
+        :return: transformed filter
+        """
+        IR_left = filter[:, 0]
+        IR_right = filter[:, 1]
+
+        # Split IRs in blocks
+        IR_left_blocked = np.reshape(IR_left, (self.IR_blocks, self.block_size))
+        IR_right_blocked = np.reshape(IR_right, (self.IR_blocks, self.block_size))
+
+        # Add zeroes to each block
+        IR_left_blocked = np.concatenate((IR_left_blocked, np.zeros([self.IR_blocks, self.block_size])), axis=1)
+        IR_right_blocked = np.concatenate((IR_right_blocked, np.zeros([self.IR_blocks, self.block_size])), axis=1)
+
+        TF_left_blocked = np.zeros([self.IR_blocks, self.block_size + 1], np.dtype(np.complex64))
+        TF_right_blocked = np.zeros([self.IR_blocks, self.block_size + 1], np.dtype(np.complex64))
+
+        for ir_block_count in range(0, self.IR_blocks):
+            TF_left_blocked[ir_block_count] = self.filter_fftw_plan(IR_left_blocked[ir_block_count])
+            TF_right_blocked[ir_block_count] = self.filter_fftw_plan(IR_right_blocked[ir_block_count])
+
+        return TF_left_blocked, TF_right_blocked
+
+    def setIR(self, filter, do_interpolation):
         """
         Hand over a new set of filters to the convolver
         and define if you want to perform an interpolation/crossfade
 
-        :param left_filter:
-        :param right_filter:
+        :param filter:
         :param do_interpolation:
         :return: None
         """
-        # Save old filters in case imnterpolation is needed
+        # Save old filters in case interpolation is needed
         self.TF_left_blocked_previous = self.TF_left_blocked
         self.TF_right_blocked_previous = self.TF_right_blocked
 
         # apply new filters
-        self.TF_left_blocked = left_filter
-        self.TF_right_blocked = right_filter
+        self.TF_left_blocked, self.TF_right_blocked = self.transform_filter(filter)
 
-        # Interpolation means cross fading the output blocks (linera interpolation)
+        # Interpolation means cross fading the output blocks (linear interpolation)
         self.interpolate = do_interpolation
 
     def process_nothing(self):
@@ -178,7 +218,7 @@ class ConvolverFFTW(object):
 
         if block.size < self.block_size:
             # print('Fill up last block')
-            print(np.shape(block))
+            # print(np.shape(block))
             block = np.concatenate((block, np.zeros(((self.block_size - block.size), 2))), 0)
 
         if self.processCounter == 0:

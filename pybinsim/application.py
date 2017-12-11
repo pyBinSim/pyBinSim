@@ -22,6 +22,7 @@
 
 """ Module contains main loop and configuration of pyBinSim """
 import time
+import logging
 
 import numpy as np
 import pyaudio
@@ -29,11 +30,15 @@ import pyaudio
 from pybinsim.convolver import ConvolverFFTW
 from pybinsim.filterstorage import FilterStorage
 from pybinsim.osc_receiver import OscReceiver
+from pybinsim.pose import Pose
 from pybinsim.soundhandler import SoundHandler
+
 
 
 class BinSimConfig(object):
     def __init__(self):
+
+        self.log = logging.getLogger("pybinsim.BinSimConfig")
 
         # Default Configuration
         self.configurationDict = {'soundfile': '',
@@ -44,7 +49,8 @@ class BinSimConfig(object):
                                   'useHeadphoneFilter': 'False',
                                   'loudnessFactor': float(1),
                                   'maxChannels': 8,
-                                  'samplingRate': 44100}
+                                  'samplingRate': 44100,
+                                  'loopSound': 'True'}
 
     def read_from_file(self, filepath):
         config = open(filepath, 'r')
@@ -55,7 +61,7 @@ class BinSimConfig(object):
             if key in self.configurationDict:
                 self.configurationDict[key] = type(self.configurationDict[key])(line_content[1])
             else:
-                print('Entry ' + key + ' is unknown')
+                self.log.warning('Entry ' + key + ' is unknown')
 
     def get(self, setting):
         return self.configurationDict[setting]
@@ -67,7 +73,9 @@ class BinSim(object):
     """
 
     def __init__(self, config_file):
-        print("BinSim: init")
+
+        self.log = logging.getLogger("pybinsim.BinSim")
+        self.log.info("BinSim: init")
 
         # Read Configuration File
         self.config = BinSimConfig()
@@ -93,7 +101,7 @@ class BinSim(object):
         self.__cleanup()
 
     def stream_start(self):
-        print("BinSim: stream_start")
+        self.log.info("BinSim: stream_start")
         self.stream = self.p.open(format=pyaudio.paFloat32, channels=2,
                                   rate=self.sampleRate, output=True,
                                   frames_per_buffer=self.blockSize,
@@ -105,11 +113,11 @@ class BinSim(object):
 
     def initialize_pybinsim(self):
 
+
         self.result = np.empty([self.config.get('blockSize'), 2], np.dtype(np.float32))
         self.block = np.empty([self.config.get('maxChannels'), self.config.get('blockSize')], np.dtype(np.float32))
 
         # Create FilterStorage
-        print(type(self.config.get('blockSize')))
         filterStorage = FilterStorage(self.config.get('filterSize'), self.config.get('blockSize'),
                                       self.config.get('filterList'))
 
@@ -120,11 +128,13 @@ class BinSim(object):
 
         # Create SoundHandler
         soundHandler = SoundHandler(self.config.get('blockSize'), self.config.get('maxChannels'),
-                                    self.config.get('samplingRate'))
-        soundHandler.request_new_sound_file([self.config.get('soundfile')])
+                                    self.config.get('samplingRate'), self.config.get('loopSound'))
+
+        soundfile_list = self.config.get('soundfile')
+        soundHandler.request_new_sound_file(soundfile_list)
 
         # Create N convolvers depending on the number of wav channels
-        print('Number of Channels: ' + str(self.config.get('maxChannels')))
+        self.log.info('Number of Channels: ' + str(self.config.get('maxChannels')))
         convolvers = [None] * self.config.get('maxChannels')
         for n in range(self.config.get('maxChannels')):
             convolvers[n] = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), False)
@@ -133,18 +143,18 @@ class BinSim(object):
         convolverHP = None
         if self.config.get('useHeadphoneFilter') == 'True':
             convolverHP = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), True)
-            left, right = filterStorage.get_filter(['HPFILTER'])
-            convolverHP.setIR(left, right, False)
+            hpfilter= filterStorage.get_headphone_filter()
+            convolverHP.setIR(hpfilter, False)
 
         return convolverHP, convolvers, filterStorage, oscReceiver, soundHandler
 
     def close(self):
-        print("BinSim: close")
+        self.log.info("BinSim: close")
         self.stream_close()
         self.p.terminate()
 
     def stream_close(self):
-        print("BinSim: stream_close")
+        self.log.info("BinSim: stream_close")
         self.stream.stop_stream()
         self.stream.close()
 
@@ -185,8 +195,8 @@ def audio_callback(binsim):
             if binsim.oscReceiver.is_filter_update_necessary(n):
                 # print('Updating Filter')
                 filterValueList = binsim.oscReceiver.get_current_values(n)
-                leftFilter, rightFilter = binsim.filterStorage.get_filter(filterValueList)
-                binsim.convolvers[n].setIR(leftFilter, rightFilter, callback.config.get('enableCrossfading'))
+                filter = binsim.filterStorage.get_filter(Pose.from_filterValueList(filterValueList))
+                binsim.convolvers[n].setIR(filter, callback.config.get('enableCrossfading'))
 
             left, right = binsim.convolvers[n].process(binsim.block[n, :])
 
