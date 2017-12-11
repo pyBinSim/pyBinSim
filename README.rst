@@ -9,7 +9,7 @@ Install
 
 ::
 
-    $ conda create --name binsim35 python=3.5 numpy scipy
+    $ conda create --name binsim35 python=3.5 numpy
     $ source activate binsim35
     $ pip install pybinsim
 
@@ -63,7 +63,7 @@ blockSize:
 filterSize: 
     Defines filter size of the filters loaded with the filter list. Filter size should be a mutltiple of blockSize.
 maxChannels: 
-    Maximum number of sound sources/audio channels which can be controlled during runtime.
+    Maximum number of sound sources/audio channels which can be controlled during runtime. The value for maxChannels must match or exceed the number of channels of soundFile(s).
 samplingRate: 
     Sample rate for filters and soundfiles. Caution: No automatic sample rate conversion.
 enableCrossfading: 
