@@ -9,8 +9,8 @@ Install
 
 ::
 
-    $ conda create --name binsim35 python=3.5 numpy
-    $ source activate binsim35
+    $ conda create --name binsim python=3.6 numpy
+    $ source activate binsim
     $ pip install pybinsim
     
 On linux, make sure that gcc and the development headers for libfftw and portaudio are installed, before invoking `pip install pybinsim`.
