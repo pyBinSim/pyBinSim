@@ -36,4 +36,12 @@ install:
 
 # command to run tests
 script:
-  - python setup.py test
+- python setup.py test
+
+deploy:
+  provider: pypi
+  user: pythom
+  password:
+    secure: IqMqbZIg6oWXEPbCSzBh8oSZBjs5a62crqXAnWzgFxAJtKTAo3ahkjlWIiS1sdR1bRY4TfDU13+nYhSh+l86t55rlHJ7s9D0jfXBZ2rlp8kvKAByrMoHpzckasazRby5brVaJ33NPBmlYouyWDL8gWZsvqRoiXxLQ2YCQ+rWDi0ozDjRnwYe3OeOTNfEFiq+nxs9XNXiQVOadFUBWwcX+N1I5JeKBEQzJRkl6FSc7rG7d1ZoPhximFQuh15LLZqW5GlOC/5+O/XbFyXG/yenQgu4iBy8PXdEJXvf6ZjCB3ONmll4Pp5m9oWyNAe2+WrzmTS52IfS8cZ/GaKh9f8gwpCxEZ8T+Puf0/7U0ijtxs4gQGzTkuV7j8odmWA5ng7vQNuHNRs5hgdcZNbFrwdbksAg8X5x90ZV/l9rPmb1NAO0JiUpEhzEPXCMMYk/K51EU9O7DplTcvEXIUIQo66P4tc/s+ZQxurWpaS/oFBX7seeYYMWnv1drtri/g8gs6T5TH+4DJTMec9RYzTHhLyFhJAa26jJLFoJPR/u88zfDYk+499Uk87oD5K71FAoJ2I0TqhK27jJqvR5usK4BLohR58UNAW1YEmkFEqm3qttftmztwwGUl+4OdkS5Bf8QHdMvovbCUZLweu+niGo7q+NB+CAo9IkdYY/QMdWxf1djlU=
+  on:
+    tags: true
