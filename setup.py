@@ -42,7 +42,7 @@ setup(
         "Soundfile >= 0.9.0",
     ],
 
-    description='Real-time dynamic binaural synthesis with head tracking',
+    description='Real-time dynamic binaural synthesis with head tracking.',
     long_description=open('README.rst').read(),
     packages=['pybinsim'],
     include_package_data=True,
@@ -56,7 +56,9 @@ setup(
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'License :: OSI Approved :: MIT License'
     ],
 
