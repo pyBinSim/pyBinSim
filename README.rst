@@ -9,7 +9,7 @@ Install
 
 ::
 
-    $ conda create --name binsim python=3.6 numpy
+    $ conda create --name binsim python=3.5 numpy
     $ source activate binsim
     $ pip install pybinsim
     
