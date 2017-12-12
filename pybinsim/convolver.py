@@ -20,9 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import logging
 import multiprocessing
 
-import logging
 import numpy as np
 import pyfftw
 from past.builtins import xrange
@@ -63,9 +63,8 @@ class ConvolverFFTW(object):
         self.default_filter = pyfftw.zeros_aligned([self.IR_blocks, 2 * (self.block_size + 1)], np.dtype(np.float32))
 
         self.filter_fftw_plan = pyfftw.builders.rfft(np.zeros(self.block_size * 2), overwrite_input=True,
-                                              planner_effort='FFTW_MEASURE',
-                                              threads=nThreads)
-
+                                                     planner_effort='FFTW_MEASURE',
+                                                     threads=nThreads)
 
         # Create Input Buffers and create fftw plans
         self.buffer = pyfftw.zeros_aligned(self.block_size * 2, dtype='float32')

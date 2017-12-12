@@ -21,8 +21,8 @@
 # SOFTWARE.
 
 """ Module contains main loop and configuration of pyBinSim """
-import time
 import logging
+import time
 
 import numpy as np
 import pyaudio
@@ -32,7 +32,6 @@ from pybinsim.filterstorage import FilterStorage
 from pybinsim.osc_receiver import OscReceiver
 from pybinsim.pose import Pose
 from pybinsim.soundhandler import SoundHandler
-
 
 
 class BinSimConfig(object):
@@ -112,8 +111,6 @@ class BinSim(object):
             time.sleep(1)
 
     def initialize_pybinsim(self):
-
-
         self.result = np.empty([self.config.get('blockSize'), 2], np.dtype(np.float32))
         self.block = np.empty([self.config.get('maxChannels'), self.config.get('blockSize')], np.dtype(np.float32))
 
@@ -143,7 +140,7 @@ class BinSim(object):
         convolverHP = None
         if self.config.get('useHeadphoneFilter') == 'True':
             convolverHP = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), True)
-            hpfilter= filterStorage.get_headphone_filter()
+            hpfilter = filterStorage.get_headphone_filter()
             convolverHP.setIR(hpfilter, False)
 
         return convolverHP, convolvers, filterStorage, oscReceiver, soundHandler
