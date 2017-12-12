@@ -20,9 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import logging
 import threading
 
-import logging
 from pythonosc import dispatcher
 from pythonosc import osc_server
 
@@ -68,12 +68,6 @@ class OscReceiver(object):
         :return:
         """
 
-        # TODO: remove outdated comment, handleInput interface has changed.
-
-        # Only use data when identifier /pyBinSim" is followed by 4 integer values
-        # First value: which channel/convolver is adressed
-        # Second to fourth value: unique key to identify a specific filter
-
         assert identifier == "/pyBinSim"
         # assert all(isinstance(x, int) for x in args) == True
 
@@ -101,7 +95,7 @@ class OscReceiver(object):
         # assert type(soundpath) == 'str'
 
         self.log.info("soundPath: {}".format(soundpath))
-        self.soundFileList=soundpath
+        self.soundFileList = soundpath
 
     def start_listening(self):
         """Start osc receiver in background Thread"""
