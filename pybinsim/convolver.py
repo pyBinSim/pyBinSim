@@ -48,13 +48,15 @@ class ConvolverFFTW(object):
         # floor (integer) division in python 2 & 3
         self.IR_blocks = self.IR_size // block_size
 
-        # Calculate crossfade windows
-        self.crossFadeIn = np.zeros(self.block_size, dtype='float32')
-        self.crossFadeOut = np.zeros(self.block_size, dtype='float32')
-        self.crossFadeIn[:] = xrange(0, self.block_size)
-        # float division in python 2 & 3
-        self.crossFadeIn *= 1 / float((self.block_size - 1))
-        self.crossFadeOut[:] = np.flipud(self.crossFadeIn)
+        # Calculate LINEAR crossfade windows
+        #self.crossFadeIn = np.array(xrange(0, self.block_size), dtype='float32')
+        #self.crossFadeIn *= 1 / float((self.block_size - 1))
+        #self.crossFadeOut = np.flipud(self.crossFadeIn)
+
+        # Calculate COSINE-Square crossfade windows
+        self.crossFadeOut = np.array(xrange(0, self.block_size), dtype='float32')
+        self.crossFadeOut = np.square(np.cos(self.crossFadeOut/(self.block_size-1)*(np.pi/2)))
+        self.crossFadeIn = np.flipud(self.crossFadeOut)
 
         # Create default filter and fftw plan
         # Filter format: [nBlocks,blockSize*4]
@@ -320,7 +322,7 @@ class ConvolverFFTW(object):
         # Third: Transformation back to time domain
         if self.interpolate:
             # fade over full block size
-            # print('do block interpolation')
+            print('do block interpolation')
             self.outputLeft = np.multiply(self.resultLeftPreviousIFFTPlan(self.resultLeftFreqPrevious).real[
                                           self.block_size:self.block_size * 2], self.crossFadeOut) + \
                               np.multiply(self.resultLeftIFFTPlan(self.resultLeftFreq).real[
