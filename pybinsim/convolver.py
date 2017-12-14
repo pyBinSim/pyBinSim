@@ -144,14 +144,10 @@ class ConvolverFFTW(object):
         IR_left_blocked = np.concatenate((IR_left_blocked, np.zeros([self.IR_blocks, self.block_size])), axis=1)
         IR_right_blocked = np.concatenate((IR_right_blocked, np.zeros([self.IR_blocks, self.block_size])), axis=1)
 
-        TF_left_blocked = np.zeros([self.IR_blocks, self.block_size + 1], np.dtype(np.complex64))
-        TF_right_blocked = np.zeros([self.IR_blocks, self.block_size + 1], np.dtype(np.complex64))
-
         for ir_block_count in range(0, self.IR_blocks):
-            TF_left_blocked[ir_block_count] = self.filter_fftw_plan(IR_left_blocked[ir_block_count])
-            TF_right_blocked[ir_block_count] = self.filter_fftw_plan(IR_right_blocked[ir_block_count])
+            self.TF_left_blocked[ir_block_count] = self.filter_fftw_plan(IR_left_blocked[ir_block_count])
+            self.TF_right_blocked[ir_block_count] = self.filter_fftw_plan(IR_right_blocked[ir_block_count])
 
-        return TF_left_blocked, TF_right_blocked
 
     def setIR(self, filter, do_interpolation):
         """
@@ -167,7 +163,7 @@ class ConvolverFFTW(object):
         self.TF_right_blocked_previous = self.TF_right_blocked
 
         # apply new filters
-        self.TF_left_blocked, self.TF_right_blocked = self.transform_filter(filter)
+        self.transform_filter(filter)
 
         # Interpolation means cross fading the output blocks (linear interpolation)
         self.interpolate = do_interpolation
@@ -242,56 +238,16 @@ class ConvolverFFTW(object):
         self.FDL_left[0:self.block_size + 1] = self.bufferFftPlan(self.buffer)
         self.FDL_right[0:self.block_size + 1] = self.buffer2FftPlan(self.buffer2)
 
-    def multiply_and_add(self, IR_block_count):
-        """
-        Multiply Current Filters with data stored in the FDL
-
-        :param IR_block_count:
-        :return: None
-        """
+    def multiply_and_add(self,IR_block_count,result,input1,input2):
 
         if IR_block_count == 0:
-            self.resultLeftFreq = np.multiply(self.TF_left_blocked[IR_block_count], self.FDL_left[(
-                IR_block_count * (self.block_size + 1)):((IR_block_count + 1) * (self.block_size + 1))])
-
-            self.resultRightFreq = np.multiply(self.TF_right_blocked[IR_block_count], self.FDL_right[(
+            result = np.multiply(input1[IR_block_count], input2[(
                 IR_block_count * (self.block_size + 1)):((IR_block_count + 1) * (self.block_size + 1))])
         else:
-            self.resultLeftFreq += np.multiply(self.TF_left_blocked[IR_block_count],
-                                               self.FDL_left[
-                                               (IR_block_count * (self.block_size + 1)):(
-                                                   (IR_block_count + 1) * (self.block_size + 1))])
+            result += np.multiply(input1[IR_block_count], input2[(
+                IR_block_count * (self.block_size + 1)):((IR_block_count + 1) * (self.block_size + 1))])
 
-            self.resultRightFreq += np.multiply(self.TF_right_blocked[IR_block_count],
-                                                self.FDL_right[
-                                                (IR_block_count * (self.block_size + 1)):(
-                                                    (IR_block_count + 1) * (self.block_size + 1))])
-
-    def multiply_and_add_previous(self, irBlockCount):
-        """
-        Multiply Previous Filters with data stored in the FDL
-        Needed when doing block crossfade/interpolation
-
-        :param irBlockCount:
-        :return: None
-        """
-
-        if irBlockCount == 0:
-            self.resultLeftFreqPrevious = np.multiply(self.TF_left_blocked_previous[irBlockCount], self.FDL_left[(
-                irBlockCount * (self.block_size + 1)):((irBlockCount + 1) * (self.block_size + 1))])
-
-            self.resultRightFreqPrevious = np.multiply(self.TF_right_blocked_previous[irBlockCount], self.FDL_right[(
-                irBlockCount * (self.block_size + 1)):((irBlockCount + 1) * (self.block_size + 1))])
-        else:
-            self.resultLeftFreqPrevious += np.multiply(self.TF_left_blocked_previous[irBlockCount],
-                                                       self.FDL_left[
-                                                       (irBlockCount * (self.block_size + 1)):(
-                                                           (irBlockCount + 1) * (self.block_size + 1))])
-
-            self.resultRightFreqPrevious += np.multiply(self.TF_right_blocked_previous[irBlockCount],
-                                                        self.FDL_right[
-                                                        (irBlockCount * (self.block_size + 1)):(
-                                                            (irBlockCount + 1) * (self.block_size + 1))])
+        return result
 
     def process(self, block):
         """
@@ -313,29 +269,32 @@ class ConvolverFFTW(object):
         # Second: Multiplikation with IR block und accumulation with previous data
         for irBlockCount in xrange(0, self.IR_blocks):
             # Always convolute current filter
-            self.multiply_and_add(irBlockCount)
+            self.resultLeftFreq = self.multiply_and_add(irBlockCount, self.resultLeftFreq,
+                                                        self.TF_left_blocked, self.FDL_left)
+            self.resultRightFreq = self.multiply_and_add(irBlockCount, self.resultRightFreq,
+                                                         self.TF_right_blocked, self.FDL_right)
 
             # Also convolute old filter if interpolation needed
             if self.interpolate:
-                self.multiply_and_add_previous(irBlockCount)
+                self.resultLeftFreqPrevious = self.multiply_and_add(irBlockCount, self.resultLeftFreqPrevious,
+                                                                    self.TF_left_blocked_previous, self.FDL_left)
+                self.resultRightFreqPrevious = self.multiply_and_add(irBlockCount, self.resultRightFreqPrevious,
+                                                                     self.TF_right_blocked_previous, self.FDL_right)
 
         # Third: Transformation back to time domain
+        self.outputLeft = self.resultLeftIFFTPlan(self.resultLeftFreq).real[self.block_size:self.block_size * 2]
+        self.outputRight = self.resultRightIFFTPlan(self.resultRightFreq).real[self.block_size:self.block_size * 2]
+
         if self.interpolate:
             # fade over full block size
             print('do block interpolation')
-            self.outputLeft = np.multiply(self.resultLeftPreviousIFFTPlan(self.resultLeftFreqPrevious).real[
-                                          self.block_size:self.block_size * 2], self.crossFadeOut) + \
-                              np.multiply(self.resultLeftIFFTPlan(self.resultLeftFreq).real[
-                                          self.block_size:self.block_size * 2], self.crossFadeIn)
+            self.outputLeft = np.multiply(self.outputLeft,self.crossFadeIn) + \
+                              np.multiply(self.resultLeftPreviousIFFTPlan(self.resultLeftFreqPrevious).real[
+                                          self.block_size:self.block_size * 2],self.crossFadeOut)
 
-            self.outputRight = np.multiply(self.resultRightPreviousIFFTPlan(self.resultRightFreqPrevious).real[
-                                           self.block_size:self.block_size * 2], self.crossFadeOut) + \
-                               np.multiply(self.resultRightIFFTPlan(self.resultRightFreq).real[
-                                           self.block_size:self.block_size * 2], self.crossFadeIn)
-
-        else:
-            self.outputLeft = self.resultLeftIFFTPlan(self.resultLeftFreq).real[self.block_size:self.block_size * 2]
-            self.outputRight = self.resultRightIFFTPlan(self.resultRightFreq).real[self.block_size:self.block_size * 2]
+            self.outputRight = np.multiply(self.outputRight,self.crossFadeIn) + \
+                               np.multiply(self.resultRightPreviousIFFTPlan(self.resultRightFreqPrevious).real[
+                                          self.block_size:self.block_size * 2],self.crossFadeOut)
 
         self.processCounter += 1
         self.interpolate = False
