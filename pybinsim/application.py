@@ -203,13 +203,12 @@ def audio_callback(binsim):
 
             # Get new Filter
             if binsim.oscReceiver.is_filter_update_necessary(n):
-                # print('Updating Filter')
                 filterValueList = binsim.oscReceiver.get_current_values(n)
                 filter = binsim.filterStorage.get_filter(Pose.from_filterValueList(filterValueList))
                 binsim.convolvers[n].setIR(filter, callback.config.get('enableCrossfading'))
 
             left, right = binsim.convolvers[n].process(binsim.block[n, :])
-
+            
             # Sum results from all convolvers
             if n == 0:
                 binsim.result[:, 0] = left
@@ -223,11 +222,12 @@ def audio_callback(binsim):
             binsim.result[:, 0], binsim.result[:, 1] = binsim.convolverHP.process(binsim.result)
 
         # Scale data
-        binsim.result *= 1 / float((callback.config.get('maxChannels') + 1) * 2)
+        binsim.result *= 1 / float((binsim.soundHandler.get_sound_channels()) * 2)
         binsim.result *= callback.config.get('loudnessFactor')
 
         # When the last block is small than the blockSize, this is probably the end of the file.
         # Call pyaudio to stop after this frame
+        # Should not be the case for current soundhandler implementation
         if binsim.block.size < callback.config.get('blockSize'):
             pyaudio.paContinue = 1
 
