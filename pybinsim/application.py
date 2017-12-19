@@ -214,16 +214,16 @@ def audio_callback(binsim):
                 binsim.result[:, 0] = left
                 binsim.result[:, 1] = right
             else:
-                binsim.result[:, 0] += left
-                binsim.result[:, 1] += right
+                binsim.result[:, 0] = np.add(binsim.result[:, 0],left)
+                binsim.result[:, 1] = np.add(binsim.result[:, 1],right)
 
         # Finally apply Headphone Filter
         if callback.config.get('useHeadphoneFilter'):
             binsim.result[:, 0], binsim.result[:, 1] = binsim.convolverHP.process(binsim.result)
 
         # Scale data
-        binsim.result *= 1 / float((binsim.soundHandler.get_sound_channels()) * 2)
-        binsim.result *= callback.config.get('loudnessFactor')
+        binsim.result = np.divide(binsim.result, float((binsim.soundHandler.get_sound_channels()) * 2))
+        binsim.result = np.multiply(binsim.result,callback.config.get('loudnessFactor'))
 
         # When the last block is small than the blockSize, this is probably the end of the file.
         # Call pyaudio to stop after this frame
