@@ -71,7 +71,8 @@ class ConvolverFFTW(object):
         # blockSize*2 to blockSize*4: right filter
 
 
-        # Create Input Buffers and create fftw plans
+        # Create Input Buffers and create fftw plans. These need to be memory aligned, because they are ransformed to
+        # freq domain regularly
         self.buffer = pyfftw.zeros_aligned(self.block_size * 2, dtype='float32')
         self.bufferFftPlan = pyfftw.builders.rfft(self.buffer, overwrite_input=True, threads=nThreads,
                                                      planner_effort=self.fftw_planning_effort,avoid_copy=True)
@@ -81,13 +82,12 @@ class ConvolverFFTW(object):
                                                      planner_effort=self.fftw_planning_effort,avoid_copy=True)
 
         # Create arrays for the filters and the FDLs.
-        self.ZerosForPadding = np.zeros(self.block_size, dtype='float32')
-        self.TF_left_blocked =  np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
-        self.TF_right_blocked =  np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
+        self.TF_left_blocked = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
+        self.TF_right_blocked = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
         self.TF_left_blocked_previous =  np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
         self.TF_right_blocked_previous =  np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
 
-        self.filter_fftw_plan = pyfftw.builders.rfft(np.zeros(self.block_size * 2), overwrite_input=True, threads=nThreads,
+        self.filter_fftw_plan = pyfftw.builders.rfft(np.zeros(self.block_size),n=self.block_size * 2, overwrite_input=True, threads=nThreads,
                                                      planner_effort=self.fftw_planning_effort,avoid_copy=False)
 
         self.FDL_size = self.IR_blocks * (self.block_size + 1)
@@ -113,7 +113,7 @@ class ConvolverFFTW(object):
                                                                  overwrite_input=True, threads=nThreads,
                                                                  planner_effort=self.fftw_planning_effort,avoid_copy=True)
 
-        # Result of the iffft is stored here
+        # Result of the ifft is stored here
         self.outputLeft = np.zeros(self.block_size, dtype='float32')
         self.outputRight = np.zeros(self.block_size, dtype='float32')
 
@@ -148,8 +148,8 @@ class ConvolverFFTW(object):
 
         # Add zeroes to each block and transform to frequency domain
         for ir_block_count in range(0, self.IR_blocks):
-            self.TF_left_blocked[ir_block_count,:] = self.filter_fftw_plan(np.concatenate((IR_left_blocked[ir_block_count],self.ZerosForPadding)))
-            self.TF_right_blocked[ir_block_count,:] = self.filter_fftw_plan(np.concatenate((IR_right_blocked[ir_block_count],self.ZerosForPadding)))
+            self.TF_left_blocked[ir_block_count,:] = self.filter_fftw_plan(IR_left_blocked[ir_block_count])
+            self.TF_right_blocked[ir_block_count,:] = self.filter_fftw_plan(IR_right_blocked[ir_block_count])
 
 
     def setIR(self, filter, do_interpolation):
