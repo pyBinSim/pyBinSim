@@ -65,11 +65,7 @@ class ConvolverFFTW(object):
         self.crossFadeOut = np.square(np.cos(self.crossFadeOut/(self.block_size-1)*(np.pi/2)))
         self.crossFadeIn = np.flipud(self.crossFadeOut)
 
-        # Createfftw plans
-        # Filter format: [nBlocks,blockSize*4]
-        # 0 to blockSize*2: left filter
-        # blockSize*2 to blockSize*4: right filter
-
+        # Filter format: [nBlocks,blockSize*2]
 
         # Create Input Buffers and create fftw plans. These need to be memory aligned, because they are ransformed to
         # freq domain regularly
