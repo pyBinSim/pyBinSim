@@ -41,9 +41,7 @@ class ConvolverFFTW(object):
         self.log = logging.getLogger("pybinsim.ConvolverFFTW")
         self.log.info("Convolver: Start Init")
 
-
-
-        # pyFFTW Option
+        # pyFFTW Options
         pyfftw.interfaces.cache.enable()
         #self.fftw_planning_effort='FFTW_MEASURE'
         self.fftw_planning_effort ='FFTW_PATIENT'
