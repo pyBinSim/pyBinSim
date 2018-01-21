@@ -68,7 +68,7 @@ class SoundHandler(object):
             self.frame_count += 1
         elif self.currentSoundFile < len(self.soundFileList) and not self.new_sound_file_request:
             self.request_next_sound_file()
-        elif self.loopSound == 'True' and not self.new_sound_file_request:
+        elif self.loopSound and not self.new_sound_file_request:
             self.currentSoundFile = 0
             self.request_next_sound_file()
             self.frame_count = 0

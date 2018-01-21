@@ -23,7 +23,6 @@
 """ Module contains main loop and configuration of pyBinSim """
 import logging
 import time
-
 import numpy as np
 import pyaudio
 
@@ -32,6 +31,21 @@ from pybinsim.filterstorage import FilterStorage
 from pybinsim.osc_receiver import OscReceiver
 from pybinsim.pose import Pose
 from pybinsim.soundhandler import SoundHandler
+
+
+def parse_boolean(any_value):
+
+    if type(any_value) == bool:
+        return any_value
+
+    # str -> bool
+    if any_value == 'True':
+        return True
+    if any_value == 'False':
+        return False
+
+    return None
+
 
 
 class BinSimConfig(object):
@@ -44,12 +58,12 @@ class BinSimConfig(object):
                                   'blockSize': 256,
                                   'filterSize': 16384,
                                   'filterList': 'brirs/filter_list_kemar5.txt',
-                                  'enableCrossfading': 'False',
-                                  'useHeadphoneFilter': 'False',
+                                  'enableCrossfading': False,
+                                  'useHeadphoneFilter': False,
                                   'loudnessFactor': float(1),
                                   'maxChannels': 8,
                                   'samplingRate': 44100,
-                                  'loopSound': 'True'}
+                                  'loopSound': True}
 
     def read_from_file(self, filepath):
         config = open(filepath, 'r')
@@ -57,13 +71,29 @@ class BinSimConfig(object):
         for line in config:
             line_content = str.split(line)
             key = line_content[0]
+            value = line_content[1]
+
             if key in self.configurationDict:
-                self.configurationDict[key] = type(self.configurationDict[key])(line_content[1])
+                config_value_type = type(self.configurationDict[key])
+
+                if config_value_type is bool:
+                    # evaluate 'False' to False
+                    boolean_config = parse_boolean(value)
+
+                    if boolean_config is None:
+                        self.log.warning("Cannot convert {} to bool. (key: {}".format(value, key))
+
+                    self.configurationDict[key] = boolean_config
+                else:
+                    # use type(str) - ctors of int, float, ...
+                    self.configurationDict[key] = config_value_type(value)
+
             else:
                 self.log.warning('Entry ' + key + ' is unknown')
 
     def get(self, setting):
         return self.configurationDict[setting]
+
 
 
 class BinSim(object):
@@ -89,7 +119,9 @@ class BinSim(object):
         self.block = None
         self.stream = None
 
+        self.convolverWorkers = []
         self.convolverHP, self.convolvers, self.filterStorage, self.oscReceiver, self.soundHandler = self.initialize_pybinsim()
+
 
         self.p = pyaudio.PyAudio()
 
@@ -138,7 +170,7 @@ class BinSim(object):
 
         # HP Equalization convolver
         convolverHP = None
-        if self.config.get('useHeadphoneFilter') == 'True':
+        if self.config.get('useHeadphoneFilter'):
             convolverHP = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), True)
             hpfilter = filterStorage.get_headphone_filter()
             convolverHP.setIR(hpfilter, False)
@@ -165,7 +197,7 @@ class BinSim(object):
         for n in range(self.config.get('maxChannels')):
             self.convolvers[n].close()
 
-        if self.config.get('useHeadphoneFilter') == 'True':
+        if self.config.get('useHeadphoneFilter'):
             if self.convolverHP:
                 self.convolverHP.close()
 
@@ -190,31 +222,31 @@ def audio_callback(binsim):
 
             # Get new Filter
             if binsim.oscReceiver.is_filter_update_necessary(n):
-                # print('Updating Filter')
                 filterValueList = binsim.oscReceiver.get_current_values(n)
                 filter = binsim.filterStorage.get_filter(Pose.from_filterValueList(filterValueList))
                 binsim.convolvers[n].setIR(filter, callback.config.get('enableCrossfading'))
 
             left, right = binsim.convolvers[n].process(binsim.block[n, :])
-
+            
             # Sum results from all convolvers
             if n == 0:
                 binsim.result[:, 0] = left
                 binsim.result[:, 1] = right
             else:
-                binsim.result[:, 0] += left
-                binsim.result[:, 1] += right
+                binsim.result[:, 0] = np.add(binsim.result[:, 0],left)
+                binsim.result[:, 1] = np.add(binsim.result[:, 1],right)
 
         # Finally apply Headphone Filter
-        if callback.config.get('useHeadphoneFilter') == 'True':
+        if callback.config.get('useHeadphoneFilter'):
             binsim.result[:, 0], binsim.result[:, 1] = binsim.convolverHP.process(binsim.result)
 
         # Scale data
-        binsim.result *= 1 / float((callback.config.get('maxChannels') + 1) * 2)
-        binsim.result *= callback.config.get('loudnessFactor')
+        binsim.result = np.divide(binsim.result, float((binsim.soundHandler.get_sound_channels()) * 2))
+        binsim.result = np.multiply(binsim.result,callback.config.get('loudnessFactor'))
 
         # When the last block is small than the blockSize, this is probably the end of the file.
         # Call pyaudio to stop after this frame
+        # Should not be the case for current soundhandler implementation
         if binsim.block.size < callback.config.get('blockSize'):
             pyaudio.paContinue = 1
 

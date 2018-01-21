@@ -31,6 +31,16 @@ from pybinsim.utility import total_size
 
 nThreads = multiprocessing.cpu_count()
 
+class Filter(object):
+
+    def __init__(self, inputfilter, irBlocks, block_size):
+
+        self.IR_left_blocked = np.reshape(inputfilter[:, 0], (irBlocks, block_size))
+        self.IR_right_blocked = np.reshape(inputfilter[:, 1], (irBlocks, block_size))
+
+    def getFilter(self):
+        return self.IR_left_blocked, self.IR_right_blocked
+
 
 class FilterStorage(object):
     """ Class for storing all filters mentioned in the filter list """
@@ -43,7 +53,7 @@ class FilterStorage(object):
         self.ir_size = irSize
         self.ir_blocks = irSize // block_size
         self.block_size = block_size
-        self.default_filter = np.zeros((self.ir_size, 2), dtype='float32')
+        self.default_filter = Filter(np.zeros((self.ir_size, 2), dtype='float32'),self.ir_blocks,self.block_size)
 
         self.filter_list_path = filter_list_name
         self.filter_list = open(self.filter_list_path, 'r')
@@ -81,7 +91,7 @@ class FilterStorage(object):
 
             if line.startswith('HPFILTER'):
                 self.log.info("Loading headphone filter: {}".format(filter_path))
-                self.headphone_filter = self.load_filter(filter_path)
+                self.headphone_filter = Filter(self.load_filter(filter_path),self.ir_blocks,self.block_size)
                 continue
 
             filter_value_list = tuple(line_content[0:-1])
@@ -102,14 +112,14 @@ class FilterStorage(object):
         for i, (pose, filter_path) in enumerate(self.parse_filter_list()):
             self.log.debug('Loading {}'.format(filter_path))
 
-            filter = self.load_filter(filter_path)
+            current_filter = Filter(self.load_filter(filter_path), self.ir_blocks, self.block_size)
 
             # create key and store in dict.
             key = pose.create_key()
-            self.filter_dict.update({key: filter})
+            self.filter_dict.update({key: current_filter})
 
         self.log.info("Finished loading filters.")
-        self.log.info("filter_dict size: {}MiB".format(total_size(self.filter_dict) // 1024 // 1024))
+        #self.log.info("filter_dict size: {}MiB".format(total_size(self.filter_dict) // 1024 // 1024))
 
     def get_filter(self, pose):
         """
