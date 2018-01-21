@@ -33,6 +33,21 @@ from pybinsim.pose import Pose
 from pybinsim.soundhandler import SoundHandler
 
 
+def parse_boolean(any_value):
+
+    if type(any_value) == bool:
+        return any_value
+
+    # str -> bool
+    if any_value == 'True':
+        return True
+    if any_value == 'False':
+        return False
+
+    return None
+
+
+
 class BinSimConfig(object):
     def __init__(self):
 
@@ -56,25 +71,29 @@ class BinSimConfig(object):
         for line in config:
             line_content = str.split(line)
             key = line_content[0]
+            value = line_content[1]
+
             if key in self.configurationDict:
-                self.configurationDict[key] = type(self.configurationDict[key])(self.checkBool(line_content[1]))
+                config_value_type = type(self.configurationDict[key])
+
+                if config_value_type is bool:
+                    # evaluate 'False' to False
+                    boolean_config = parse_boolean(value)
+
+                    if boolean_config is None:
+                        self.log.warning("Cannot convert {} to bool. (key: {}".format(value, key))
+
+                    self.configurationDict[key] = boolean_config
+                else:
+                    # use type(str) - ctors of int, float, ...
+                    self.configurationDict[key] = config_value_type(value)
+
             else:
                 self.log.warning('Entry ' + key + ' is unknown')
 
     def get(self, setting):
         return self.configurationDict[setting]
 
-    def checkBool(self,anyValue):
-        # pass value by default
-        bool_value=anyValue
-
-        # transform to bool
-        if anyValue == 'True':
-            bool_value = True
-        elif anyValue == 'False':
-            bool_value = False
-
-        return bool_value
 
 
 class BinSim(object):
