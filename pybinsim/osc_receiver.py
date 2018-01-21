@@ -45,7 +45,7 @@ class OscReceiver(object):
         # Default values; Stores filter keys for all channles/convolvers
         self.filters_updated = [True] * self.maxChannels
 
-        self.defaultValue = (0, 0, 0, 0, 0, 0)
+        self.defaultValue = (0, 0, 0, 0, 0, 0, 0, 0, 0)
         self.valueList = [self.defaultValue] * self.maxChannels
         # self.valueList = [()] * self.maxChannels
         self.soundFileList = ''

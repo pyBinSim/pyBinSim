@@ -4,7 +4,8 @@ import sys
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
-VERSION = "1.1.1"
+VERSION = "1.2.0"
+
 
 class PyTest(TestCommand):
     user_options = [('pytest-args=', 'a', "Arguments to pass to pytest")]
