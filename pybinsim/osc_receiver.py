@@ -82,7 +82,7 @@ class OscReceiver(object):
         current_channel = channel
 
         if args != self.valueList[current_channel]:
-            self.log.info("new filter")
+            #self.log.info("new filter")
             self.filters_updated[current_channel] = True
             self.valueList[current_channel] = tuple(args)
         else:

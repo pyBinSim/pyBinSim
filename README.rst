@@ -27,14 +27,14 @@ Create ``pyBinSimSettings.txt`` file with content like this
 ::
 
     soundfile signals/test441kHz.wav
-    blockSize 256
+    blockSize 512
     filterSize 16384
     filterList brirs/filter_list_kemar5.txt
-    maxChannels 8
+    maxChannels 2
     samplingRate 44100
-    enableCrossfading False
+    enableCrossfading True
     useHeadphoneFilter False
-    loudnessFactor 1
+    loudnessFactor 0.5
     loopSound False
 
 
@@ -46,6 +46,7 @@ Start Binaural Simulation
     import logging
 
     pybinsim.logger.setLevel(logging.DEBUG)    # defaults to INFO
+    #Use logging.WARNING for printing warnings only
 
     with pybinsim.BinSim('pyBinSimSettings.txt') as binsim:
         binsim.stream_start()
