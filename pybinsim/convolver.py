@@ -25,7 +25,7 @@ import multiprocessing
 
 import numpy as np
 import pyfftw
-from past.builtins import xrange
+
 
 nThreads = multiprocessing.cpu_count()
 
@@ -54,12 +54,12 @@ class ConvolverFFTW(object):
         self.IR_blocks = self.IR_size // block_size
 
         # Calculate LINEAR crossfade windows
-        #self.crossFadeIn = np.array(xrange(0, self.block_size), dtype='float32')
+        #self.crossFadeIn = np.array(range(0, self.block_size), dtype='float32')
         #self.crossFadeIn *= 1 / float((self.block_size - 1))
         #self.crossFadeOut = np.flipud(self.crossFadeIn)
 
         # Calculate COSINE-Square crossfade windows
-        self.crossFadeOut = np.array(xrange(0, self.block_size), dtype='float32')
+        self.crossFadeOut = np.array(range(0, self.block_size), dtype='float32')
         self.crossFadeOut = np.square(np.cos(self.crossFadeOut/(self.block_size-1)*(np.pi/2)))
         self.crossFadeIn = np.flipud(self.crossFadeOut)
 
@@ -78,11 +78,12 @@ class ConvolverFFTW(object):
         # Create arrays for the filters and the FDLs.
         self.TF_left_blocked = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
         self.TF_right_blocked = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
-        self.TF_left_blocked_previous =  np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
-        self.TF_right_blocked_previous =  np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
+        self.TF_left_blocked_previous = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
+        self.TF_right_blocked_previous = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
 
-        self.filter_fftw_plan = pyfftw.builders.rfft(np.zeros(self.block_size),n=self.block_size * 2, overwrite_input=True, threads=nThreads,
-                                                     planner_effort=self.fftw_planning_effort,avoid_copy=False)
+        self.filter_fftw_plan = pyfftw.builders.rfft(np.zeros(self.block_size),n=self.block_size * 2, overwrite_input=True,
+                                                     threads=nThreads, planner_effort=self.fftw_planning_effort,
+                                                     avoid_copy=False)
 
         self.FDL_size = self.IR_blocks * (self.block_size + 1)
         self.FDL_left = np.zeros(self.FDL_size, dtype='complex64')
@@ -140,10 +141,12 @@ class ConvolverFFTW(object):
         # Get blocked IRs
         IR_left_blocked, IR_right_blocked = filter.getFilter()
 
-        # Add zeroes to each block and transform to frequency domain
+        self.TF_left_blocked = np.zeros([self.IR_blocks, self.block_size + 1], dtype='complex64')
+        self.TF_right_blocked = np.zeros([self.IR_blocks, self.block_size + 1], dtype='complex64')
+
         for ir_block_count in range(0, self.IR_blocks):
-            self.TF_left_blocked[ir_block_count,:] = self.filter_fftw_plan(IR_left_blocked[ir_block_count])
-            self.TF_right_blocked[ir_block_count,:] = self.filter_fftw_plan(IR_right_blocked[ir_block_count])
+            self.TF_left_blocked[ir_block_count] = self.filter_fftw_plan(IR_left_blocked[ir_block_count])
+            self.TF_right_blocked[ir_block_count] = self.filter_fftw_plan(IR_right_blocked[ir_block_count])
 
 
     def setIR(self, filter, do_interpolation):
@@ -190,15 +193,15 @@ class ConvolverFFTW(object):
 
         else:
             # shift buffer
-            self.buffer[:self.block_size] = self.buffer[self.block_size:]
+            self.buffer = np.roll(self.buffer, -self.block_size)
             # insert new block to buffer
-            self.buffer[self.block_size:] = block
+            self.buffer[self.block_size:self.block_size * 2] = block
             # shift FDLs
-            self.FDL_left[self.block_size + 1:] = self.FDL_left[:self.FDL_size - (self.block_size + 1)]
-            self.FDL_right[self.block_size + 1:] = self.FDL_right[:self.FDL_size - (self.block_size + 1)]
+            self.FDL_left = np.roll(self.FDL_left, self.block_size + 1)
+            self.FDL_right = np.roll(self.FDL_right, self.block_size + 1)
 
             # transform buffer into freq domain and copy to FDLs
-        self.FDL_left[:self.block_size + 1] = self.FDL_right[0:self.block_size + 1] = self.bufferFftPlan(
+        self.FDL_left[:self.block_size + 1] = self.FDL_right[:self.block_size + 1] = self.bufferFftPlan(
             self.buffer)
 
     def fill_buffer_stereo(self, block):
@@ -222,18 +225,18 @@ class ConvolverFFTW(object):
 
         else:
             # shift buffer
-            self.buffer[:self.block_size] = self.buffer[self.block_size:]
-            self.buffer2[:self.block_size] = self.buffer2[self.block_size:]
+            self.buffer = np.roll(self.buffer, -self.block_size)
+            self.buffer2 = np.roll(self.buffer2, -self.block_size)
             # insert new block to buffer
             self.buffer[self.block_size:] = block[:, 0]
             self.buffer2[self.block_size:] = block[:, 1]
             # shift FDLs
-            self.FDL_left[self.block_size + 1:] = self.FDL_left[:self.FDL_size - (self.block_size + 1)]
-            self.FDL_right[self.block_size + 1:] = self.FDL_right[:self.FDL_size - (self.block_size + 1)]
+            self.FDL_left = np.roll(self.FDL_left, self.block_size + 1)
+            self.FDL_right = np.roll(self.FDL_right, self.block_size + 1)
 
         # transform buffer into freq domain and copy to FDLs
-        self.FDL_left[0:self.block_size + 1] = self.bufferFftPlan()
-        self.FDL_right[0:self.block_size + 1] = self.buffer2FftPlan()
+        self.FDL_left[0:self.block_size + 1] = self.bufferFftPlan(self.buffer)
+        self.FDL_right[0:self.block_size + 1] = self.buffer2FftPlan(self.buffer2)
 
     def multiply_and_add(self,IR_block_count,result,input1,input2):
 
@@ -255,7 +258,6 @@ class ConvolverFFTW(object):
         :param block:
         :return: (outputLeft, outputRight)
         """
-        # print("Convolver: process")
 
         # First: Fill buffer and FDLs with current block
         if not self.processStereo:
@@ -266,7 +268,7 @@ class ConvolverFFTW(object):
             self.fill_buffer_stereo(block)
 
         # Second: Multiplikation with IR block und accumulation with previous data
-        for irBlockCount in xrange(0, self.IR_blocks):
+        for irBlockCount in range(0, self.IR_blocks):
             # Always convolute current filter
             self.resultLeftFreq[:] = self.multiply_and_add(irBlockCount, self.resultLeftFreq,
                                                         self.TF_left_blocked, self.FDL_left)
@@ -281,18 +283,18 @@ class ConvolverFFTW(object):
                                                                      self.TF_right_blocked_previous, self.FDL_right)
 
         # Third: Transformation back to time domain
-        self.outputLeft = self.resultLeftIFFTPlan()[self.block_size:self.block_size * 2]
-        self.outputRight = self.resultRightIFFTPlan()[self.block_size:self.block_size * 2]
+        self.outputLeft = self.resultLeftIFFTPlan(self.resultLeftFreq)[self.block_size:self.block_size * 2]
+        self.outputRight = self.resultRightIFFTPlan(self.resultRightFreq)[self.block_size:self.block_size * 2]
 
         if self.interpolate:
             # fade over full block size
-            print('do block interpolation')
+            # print('do block interpolation')
             self.outputLeft = np.add(np.multiply(self.outputLeft,self.crossFadeIn),
-                              np.multiply(self.resultLeftPreviousIFFTPlan()[
+                              np.multiply(self.resultLeftPreviousIFFTPlan(self.resultLeftFreqPrevious)[
                                           self.block_size:self.block_size * 2], self.crossFadeOut))
 
             self.outputRight = np.add(np.multiply(self.outputRight,self.crossFadeIn),
-                               np.multiply(self.resultRightPreviousIFFTPlan()[
+                               np.multiply(self.resultRightPreviousIFFTPlan(self.resultRightFreqPrevious)[
                                           self.block_size:self.block_size * 2], self.crossFadeOut))
 
         self.processCounter += 1
