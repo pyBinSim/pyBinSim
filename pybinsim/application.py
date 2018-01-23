@@ -244,6 +244,9 @@ def audio_callback(binsim):
         binsim.result = np.divide(binsim.result, float((binsim.soundHandler.get_sound_channels()) * 2))
         binsim.result = np.multiply(binsim.result,callback.config.get('loudnessFactor'))
 
+        if np.max(np.abs(binsim.result))>1:
+            binsim.log.warn('Clipping occurred: Adjust loudnessFactor!')
+
         # When the last block is small than the blockSize, this is probably the end of the file.
         # Call pyaudio to stop after this frame
         # Should not be the case for current soundhandler implementation
