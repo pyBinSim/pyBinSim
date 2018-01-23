@@ -34,7 +34,7 @@ Create ``pyBinSimSettings.txt`` file with content like this
     samplingRate 44100
     enableCrossfading True
     useHeadphoneFilter False
-    loudnessFactor 1
+    loudnessFactor 0.5
     loopSound False
 
 
