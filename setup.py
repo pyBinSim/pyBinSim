@@ -4,7 +4,7 @@ import sys
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
-VERSION = "1.2.2"
+VERSION = "1.2.3"
 
 
 class PyTest(TestCommand):
@@ -31,16 +31,16 @@ setup(
     tests_require=['pytest'],
     cmdclass={'test': PyTest},
     install_requires=[
-        "future >= 0.16.0",
-        "numpy >= 1.12.1",
-        "ovr >= 1.10.101",
-        "pyaudio >= 0.2.10",
+        "future == 0.16.0",
+        "numpy == 1.12.1",
+        "ovr == 1.10.101",
+        "pyaudio == 0.2.10",
         "pyfftw == 0.10.4",
-        "pyserial >= 3.2.1",
-        "pytest >= 3.0.5",
-        "python-osc >= 1.6.3",
-        "six >= 1.10.0",
-        "Soundfile >= 0.9.0",
+        "pyserial == 3.2.1",
+        "pytest == 3.0.5",
+        "python-osc == 1.6.3",
+        "six == 1.10.0",
+        "Soundfile == 0.9.0",
     ],
 
     description='Real-time dynamic binaural synthesis with head tracking.',
