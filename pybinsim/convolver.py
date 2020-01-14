@@ -306,7 +306,7 @@ class ConvolverFFTW(object):
                                                  self.crossFadeOut))
             self.outputRight = np.add(np.multiply(self.outputRight,self.crossFadeIn),
                                       np.multiply(
-                                          self.resultLeftPreviousIFFTPlan()[self.block_size:self.block_size * 2],
+                                          self.resultRightPreviousIFFTPlan()[self.block_size:self.block_size * 2],
                                           self.crossFadeOut))
 
         self.processCounter += 1

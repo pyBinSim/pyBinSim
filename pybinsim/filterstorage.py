@@ -44,7 +44,7 @@ class Filter(object):
 class FilterStorage(object):
     """ Class for storing all filters mentioned in the filter list """
 
-    def __init__(self, irSize, block_size, filter_list_name, useHeadphoneFilter = False, headhoneFilterSize = 0, useSplittedFilters = False, lateReverbSize = 0):
+    def __init__(self, irSize, block_size, filter_list_name, useHeadphoneFilter = False, headphoneFilterSize = 0, useSplittedFilters = False, lateReverbSize = 0):
 
         self.log = logging.getLogger("pybinsim.FilterStorage")
         self.log.info("FilterStorage: init")
@@ -56,8 +56,8 @@ class FilterStorage(object):
 
         self.useHeadphoneFilter = useHeadphoneFilter
         if useHeadphoneFilter:
-            self.headPhoneFilterSize = headhoneFilterSize
-            self.heapdhone_ir_blocks = headhoneFilterSize // block_size
+            self.headPhoneFilterSize = headphoneFilterSize
+            self.headphone_ir_blocks = headphoneFilterSize // block_size
 
         self.useSplittedFilters = useSplittedFilters
         if useSplittedFilters:
@@ -101,7 +101,7 @@ class FilterStorage(object):
 
             if line.startswith('HPFILTER') and self.useHeadphoneFilter:
                 self.log.info("Loading headphone filter: {}".format(filter_path))
-                self.headphone_filter = Filter(self.load_filter(filter_path), self.heapdhone_ir_blocks, self.block_size)
+                self.headphone_filter = Filter(self.load_filter(filter_path), self.headphone_ir_blocks, self.block_size)
                 continue
             elif line.startswith('HPFILTER') :
                 self.log.info("Skipping headphone filter: {}".format(filter_path))
