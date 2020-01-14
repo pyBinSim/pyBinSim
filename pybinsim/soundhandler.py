@@ -91,7 +91,6 @@ class SoundHandler(object):
 
     def _run_file_reader(self):
         file_read_thread = threading.Thread(target=self.read_sound_file)
-        file_read_thread.daemon = True
         file_read_thread.start()
 
     def read_sound_file(self):

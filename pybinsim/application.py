@@ -247,10 +247,6 @@ def audio_callback(binsim):
         if np.max(np.abs(binsim.result))>1:
             binsim.log.warn('Clipping occurred: Adjust loudnessFactor!')
 
-        # Check for buffer underrun
-        if status == 4:
-            binsim.log.warn('Output buffer underrun occurred')
-
         # When the last block is small than the blockSize, this is probably the end of the file.
         # Call pyaudio to stop after this frame
         # Should not be the case for current soundhandler implementation
