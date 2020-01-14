@@ -34,7 +34,6 @@ nThreads = multiprocessing.cpu_count()
 class Filter(object):
 
     def __init__(self, inputfilter, irBlocks, block_size):
-
         self.IR_left_blocked = np.reshape(inputfilter[:, 0], (irBlocks, block_size))
         self.IR_right_blocked = np.reshape(inputfilter[:, 1], (irBlocks, block_size))
 
@@ -45,7 +44,7 @@ class Filter(object):
 class FilterStorage(object):
     """ Class for storing all filters mentioned in the filter list """
 
-    def __init__(self, irSize, block_size, filter_list_name):
+    def __init__(self, irSize, block_size, filter_list_name, useHeadphoneFilter = False, headhoneFilterSize = 0, useSplittedFilters = False, lateReverbSize = 0):
 
         self.log = logging.getLogger("pybinsim.FilterStorage")
         self.log.info("FilterStorage: init")
@@ -55,10 +54,21 @@ class FilterStorage(object):
         self.block_size = block_size
         self.default_filter = Filter(np.zeros((self.ir_size, 2), dtype='float32'),self.ir_blocks,self.block_size)
 
+        self.useHeadphoneFilter = useHeadphoneFilter
+        if useHeadphoneFilter:
+            self.headPhoneFilterSize = headhoneFilterSize
+            self.heapdhone_ir_blocks = headhoneFilterSize // block_size
+
+        self.useSplittedFilters = useSplittedFilters
+        if useSplittedFilters:
+            self.lateReverbSize = lateReverbSize
+            self.late_ir_blocks = lateReverbSize // block_size
+
         self.filter_list_path = filter_list_name
         self.filter_list = open(self.filter_list_path, 'r')
 
         self.headphone_filter = None
+        self.late_reverb_filter = None
 
         # format: [key,{filter}]
         self.filter_dict = {}
@@ -89,10 +99,22 @@ class FilterStorage(object):
             line_content = line.split()
             filter_path = line_content[-1]
 
-            if line.startswith('HPFILTER'):
+            if line.startswith('HPFILTER') and self.useHeadphoneFilter:
                 self.log.info("Loading headphone filter: {}".format(filter_path))
-                self.headphone_filter = Filter(self.load_filter(filter_path),self.ir_blocks,self.block_size)
+                self.headphone_filter = Filter(self.load_filter(filter_path), self.heapdhone_ir_blocks, self.block_size)
                 continue
+            elif line.startswith('HPFILTER') :
+                self.log.info("Skipping headphone filter: {}".format(filter_path))
+                continue
+
+            if line.startswith('LATEREVERB') and self.useSplittedFilters:
+                self.log.info("Loading late reveerb filter: {}".format(filter_path))
+                self.late_reverb_filter = Filter(self.load_filter(filter_path), self.late_ir_blocks, self.block_size)
+                continue
+            elif line.startswith('LATEREVERB'):
+                self.log.info("Skipping late reverb filter: {}".format(filter_path))
+                continue
+
 
             filter_value_list = tuple(line_content[0:-1])
 
@@ -149,15 +171,23 @@ class FilterStorage(object):
 
         return self.headphone_filter
 
+    def get_latereverb_filter(self):
+        if self.late_reverb_filter is None:
+            raise RuntimeError("Late reverb filter not loaded")
+
+        return self.late_reverb_filter
+
     def load_filter(self, filter_path):
 
         current_filter, fs = sf.read(filter_path, dtype='float32')
 
-        filter_size = np.shape(current_filter)
+        #TODO: Catch or warn filter sizes depending on filter type
+
+        #filter_size = np.shape(current_filter)
 
         # Fill filter with zeros if to short
-        if filter_size[0] < self.ir_size:
-            self.log.warning('Filter to short: Fill up with zeros')
-            current_filter = np.concatenate((current_filter, np.zeros((self.ir_size - filter_size[0], 2))), 0)
+        #if filter_size[0] < self.ir_size:
+        #    self.log.warning('Filter to short: Fill up with zeros')
+        #    current_filter = np.concatenate((current_filter, np.zeros((self.ir_size - filter_size[0], 2))), 0)
 
         return current_filter

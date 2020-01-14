@@ -36,7 +36,7 @@ class ConvolverFFTW(object):
     with a BRIRsor HRTF
     """
 
-    def __init__(self, ir_size, block_size, process_stereo):
+    def __init__(self, ir_size, block_size, process_stereo, useSplittedFilters = False, lateReverbSize = 0):
 
         self.log = logging.getLogger("pybinsim.ConvolverFFTW")
         self.log.info("Convolver: Start Init")
@@ -49,6 +49,18 @@ class ConvolverFFTW(object):
         # Get Basic infos
         self.IR_size = ir_size
         self.block_size = block_size
+        self.reverbSize = lateReverbSize
+        self.late_IR_blocks = 0
+
+        self.useSplittedFilters = useSplittedFilters
+        if self.useSplittedFilters:
+            # Needed for concatenating filters
+            self.late_IR_blocks = self.reverbSize // block_size
+            # Size used for convolution changes
+            self.IR_size += self.reverbSize
+
+        self.late_IR_left_blocked = None
+        self.late_IR_right_blocked = None
 
         # floor (integer) division in python 2 & 3
         self.IR_blocks = self.IR_size // block_size
@@ -76,6 +88,10 @@ class ConvolverFFTW(object):
                                                      planner_effort=self.fftw_planning_effort,avoid_copy=True)
 
         # Create arrays for the filters and the FDLs.
+        if self.useSplittedFilters:
+            self.TF_late_left_blocked = np.zeros((self.late_IR_blocks, self.block_size + 1), dtype='complex64')
+            self.TF_late_right_blocked = np.zeros((self.late_IR_blocks, self.block_size + 1), dtype='complex64')
+
         self.TF_left_blocked = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
         self.TF_right_blocked = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
         self.TF_left_blocked_previous = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
@@ -140,10 +156,16 @@ class ConvolverFFTW(object):
         # Get blocked IRs
         IR_left_blocked, IR_right_blocked = filter.getFilter()
 
-        for ir_block_count in range(0, self.IR_blocks):
+        # TODO: Remove for loop
+        # Update early part of filter
+        for ir_block_count in range(0, self.IR_blocks-self.late_IR_blocks):
             self.TF_left_blocked[ir_block_count,:] = self.filter_fftw_plan(IR_left_blocked[ir_block_count])
             self.TF_right_blocked[ir_block_count,:] = self.filter_fftw_plan(IR_right_blocked[ir_block_count])
 
+        # Attach late part
+        if self.useSplittedFilters:
+            self.TF_left_blocked[(self.late_IR_blocks-1):,:] = self.TF_late_left_blocked[:(self.IR_blocks-1),:]
+            self.TF_right_blocked[(self.late_IR_blocks-1):,:] = self.TF_late_right_blocked[:(self.IR_blocks-1),:]
 
     def setIR(self, filter, do_interpolation):
         """
@@ -163,6 +185,20 @@ class ConvolverFFTW(object):
 
         # Interpolation means cross fading the output blocks (linear interpolation)
         self.interpolate = do_interpolation
+
+    def setLateReverb(self, filter):
+        """
+        Hand over latereverb filter to the convolver
+
+        :param filter:
+        :return: None
+        """
+        self.late_IR_left_blocked, self.late_IR_right_blocked = filter.getFilter()
+
+        for ir_block_count in range(0,self.late_IR_blocks):
+            self.TF_late_left_blocked[ir_block_count,:] = self.filter_fftw_plan(self.late_IR_left_blocked[ir_block_count])
+            self.TF_late_right_blocked[ir_block_count,:] = self.filter_fftw_plan(self.late_IR_right_blocked[ir_block_count])
+
 
     def process_nothing(self):
         """

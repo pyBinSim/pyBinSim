@@ -60,10 +60,13 @@ class BinSimConfig(object):
                                   'filterList': 'brirs/filter_list_kemar5.txt',
                                   'enableCrossfading': False,
                                   'useHeadphoneFilter': False,
+                                  'headphoneFilterSize': 16384,
                                   'loudnessFactor': float(1),
                                   'maxChannels': 8,
                                   'samplingRate': 44100,
-                                  'loopSound': True}
+                                  'loopSound': True,
+                                  'useSplittedFilters': False,
+                                  'lateReverbSize': 16384}
 
     def read_from_file(self, filepath):
         config = open(filepath, 'r')
@@ -148,7 +151,7 @@ class BinSim(object):
 
         # Create FilterStorage
         filterStorage = FilterStorage(self.config.get('filterSize'), self.config.get('blockSize'),
-                                      self.config.get('filterList'))
+                                      self.config.get('filterList'), self.config.get('useHeadphoneFilter'), self.config.get('headphoneFilterSize'), self.config.get('useSplittedFilters'),self.config.get('lateReverbSize'))
 
         # Start an oscReceiver
         oscReceiver = OscReceiver()
@@ -166,12 +169,15 @@ class BinSim(object):
         self.log.info('Number of Channels: ' + str(self.config.get('maxChannels')))
         convolvers = [None] * self.config.get('maxChannels')
         for n in range(self.config.get('maxChannels')):
-            convolvers[n] = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), False)
+            convolvers[n] = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), False, self.config.get('useSplittedFilters'), self.config.get('lateReverbSize'))
+            if self.config.get('useSplittedFilters'):
+                latereverbfilter = filterStorage.get_headphone_filter()
+                convolvers[n].setLateReverb(latereverbfilter)
 
         # HP Equalization convolver
         convolverHP = None
         if self.config.get('useHeadphoneFilter'):
-            convolverHP = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), True)
+            convolverHP = ConvolverFFTW(self.config.get('headphoneFilterSize'), self.config.get('blockSize'), True)
             hpfilter = filterStorage.get_headphone_filter()
             convolverHP.setIR(hpfilter, False)
 
