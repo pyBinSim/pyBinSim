@@ -44,7 +44,7 @@ class ConvolverFFTW(object):
         # pyFFTW Options
         pyfftw.interfaces.cache.enable()
         #self.fftw_planning_effort='FFTW_MEASURE'
-        self.fftw_planning_effort ='FFTW_PATIENT'
+        self.fftw_planning_effort ='FFTW_ESTIMATE'
 
         # Get Basic infos
         self.IR_size = ir_size
@@ -156,16 +156,20 @@ class ConvolverFFTW(object):
         # Get blocked IRs
         IR_left_blocked, IR_right_blocked = filter.getFilter()
 
+        self.TF_left_blocked = np.zeros([self.IR_blocks, self.block_size + 1], dtype='complex64')
+        self.TF_right_blocked = np.zeros([self.IR_blocks, self.block_size + 1], dtype='complex64')
+
         # TODO: Remove for loop
         # Update early part of filter
-        for ir_block_count in range(0, self.IR_blocks-self.late_IR_blocks):
+        late_early_transition = (self.IR_blocks - self.late_IR_blocks)
+        for ir_block_count in range(late_early_transition):
             self.TF_left_blocked[ir_block_count,:] = self.filter_fftw_plan(IR_left_blocked[ir_block_count])
             self.TF_right_blocked[ir_block_count,:] = self.filter_fftw_plan(IR_right_blocked[ir_block_count])
 
         # Attach late part
         if self.useSplittedFilters:
-            self.TF_left_blocked[(self.late_IR_blocks-1):,:] = self.TF_late_left_blocked[:(self.IR_blocks-1),:]
-            self.TF_right_blocked[(self.late_IR_blocks-1):,:] = self.TF_late_right_blocked[:(self.IR_blocks-1),:]
+            self.TF_left_blocked[late_early_transition:, :] = self.TF_late_left_blocked
+            self.TF_right_blocked[late_early_transition:, :] = self.TF_late_right_blocked
 
     def setIR(self, filter, do_interpolation):
         """
@@ -195,7 +199,7 @@ class ConvolverFFTW(object):
         """
         self.late_IR_left_blocked, self.late_IR_right_blocked = filter.getFilter()
 
-        for ir_block_count in range(0,self.late_IR_blocks):
+        for ir_block_count in range(self.late_IR_blocks):
             self.TF_late_left_blocked[ir_block_count,:] = self.filter_fftw_plan(self.late_IR_left_blocked[ir_block_count])
             self.TF_late_right_blocked[ir_block_count,:] = self.filter_fftw_plan(self.late_IR_right_blocked[ir_block_count])
 

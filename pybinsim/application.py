@@ -171,7 +171,7 @@ class BinSim(object):
         for n in range(self.config.get('maxChannels')):
             convolvers[n] = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), False, self.config.get('useSplittedFilters'), self.config.get('lateReverbSize'))
             if self.config.get('useSplittedFilters'):
-                latereverbfilter = filterStorage.get_headphone_filter()
+                latereverbfilter = filterStorage.get_latereverb_filter()
                 convolvers[n].setLateReverb(latereverbfilter)
 
         # HP Equalization convolver
