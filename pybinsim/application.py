@@ -253,6 +253,9 @@ def audio_callback(binsim):
         if binsim.block.size < callback.config.get('blockSize'):
             pyaudio.paContinue = 1
 
+        if status == 4:
+            binsim.log.warn('Output buffer underrun occurred')
+
         return (binsim.result[:frame_count].tostring(), pyaudio.paContinue)
 
     callback.config = binsim.config
