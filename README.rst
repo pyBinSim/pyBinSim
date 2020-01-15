@@ -34,8 +34,14 @@ Create ``pyBinSimSettings.txt`` file with content like this
     samplingRate 44100
     enableCrossfading True
     useHeadphoneFilter False
+    headphoneFilterSize 1024
     loudnessFactor 0.5
     loopSound False
+    useSplittedFilters False
+    lateReverbSize 16384
+    pauseConvolution False
+    pauseAudioPlayback False
+
 
 
 Start Binaural Simulation
@@ -64,7 +70,7 @@ Config parameter description:
 -----------------------------
 
 soundfile: 
-    Defines \*.wav file which is played back at startup. Sound file can contain up to maxChannels audio channels. Also accepts multiple files separated by '#'; Example: 'soundfile signals/sound1.wav#signals/sound2.wav
+    Defines \*.wav file which is played back at startup. Sound file can contain up to maxChannels audio channels. Also accepts multiple files separated by '#'; Example: 'soundfile signals/sound1.wav#signals/sound2.wav.  Can be changed via OSC.
 blockSize: 
     Number of samples which are processed per block. Low values reduce delay but increase cpu load.
 filterSize: 
@@ -77,10 +83,20 @@ enableCrossfading:
     Enable cross fade between audio blocks. Set 'False' or 'True'.
 useHeadphoneFilter: 
     Enables headhpone equalization. The filterset should contain a filter with the identifier HPFILTER. Set 'False' or 'True'.
-loudnessFactor: 
+headphoneFilterSize:
+    Size of the headphone filter. Size has to be dividable by blockSize.
+loudnessFactor:
     Factor for overall output loudness. Attention: Clipping may occur
 loopSound:
     Enables looping of sound file or sound file list. Set 'False' or 'True'.
+useSplittedFilters:
+    If enabled, a static late reverb filter is attached to all filters in the filterlist. The filterset should contain a filter with the identifier LATEREVERB. Set 'False' or 'True'.
+lateReverbSize:
+    Size of the late reverb filter. Size has to be dividable by blockSize.
+pauseConvolution:
+    Bypasses convolution. Set 'False' or 'True'. Can be changed via OSC.
+pauseAudioPlayback:
+    For pausing the audio playback. Set 'False' or 'True'. Can be changed via OSC.
 
 
 OSC Messages and filter lists:
@@ -108,6 +124,21 @@ Or a sound file list
     /pyBinSimFile folder/file_1.wav#folder/file_2.wav
 
 The audiofile has to be located on the pc where pyBinSim runs. Files are not transmitted over network.
+
+Further OSC Messages:
+------------------------------
+
+Pause audio playback. Send 'True' or 'False'
+
+::
+
+    /pyBinSimPauseAudioPlayback 'True'
+
+Bypass convolution. Send 'True' or 'False'
+
+::
+
+    /pyBinSimPauseConvolution 'True'
 
 
 Demos
