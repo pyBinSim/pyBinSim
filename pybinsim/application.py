@@ -239,9 +239,14 @@ def audio_callback(binsim):
             binsim.block[:binsim.soundHandler.get_sound_channels(), :] = binsim.soundHandler.buffer_read()
 
         if binsim.current_config.get('pauseConvolution'):
-            binsim.result = np.zeros((binsim.blockSize,2), dtype='float32')
+            if binsim.soundHandler.get_sound_channels() == 2:
+                binsim.result=np.transpose(binsim.block[:binsim.soundHandler.get_sound_channels(), :])
+            else:
+                mix = np.mean(binsim.block[:binsim.soundHandler.get_sound_channels(), :], 0)
+                binsim.result[:, 0] = mix
+                binsim.result[:, 1] = mix
         else:
-            # Update Filters and run each convolver with the current block
+            # Update Filters and run each convolver with the current blockh
             for n in range(binsim.soundHandler.get_sound_channels()):
 
                 # Get new Filter
@@ -264,9 +269,9 @@ def audio_callback(binsim):
             if callback.config.get('useHeadphoneFilter'):
                 binsim.result[:, 0], binsim.result[:, 1] = binsim.convolverHP.process(binsim.result)
 
-            # Scale data
-            binsim.result = np.divide(binsim.result, float((binsim.soundHandler.get_sound_channels()) * 2))
-            binsim.result = np.multiply(binsim.result,callback.config.get('loudnessFactor'))
+        # Scale data
+        binsim.result = np.divide(binsim.result, float((binsim.soundHandler.get_sound_channels()) * 2))
+        binsim.result = np.multiply(binsim.result,callback.config.get('loudnessFactor'))
 
         if np.max(np.abs(binsim.result))>1:
             binsim.log.warn('Clipping occurred: Adjust loudnessFactor!')
