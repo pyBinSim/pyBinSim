@@ -89,6 +89,9 @@ class SoundHandler(object):
         self.buffer_add_sound()
         return buffer_content
 
+    def read_zeros(self):
+        return np.zeros([self.active_channels, self.chunk_size])
+
     def _run_file_reader(self):
         file_read_thread = threading.Thread(target=self.read_sound_file)
         file_read_thread.daemon = True

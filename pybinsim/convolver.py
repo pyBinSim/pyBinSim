@@ -290,8 +290,8 @@ class ConvolverFFTW(object):
             self.fill_buffer_stereo(block)
 
         # Second: Multiplikation with IR block und accumulation with previous data
-        self.resultLeftFreq[:] = np.sum(np.multiply(self.TF_left_blocked,self.FDL_left),axis=0)
-        self.resultRightFreq[:] = np.sum(np.multiply(self.TF_right_blocked,self.FDL_right),axis=0)
+        self.resultLeftFreq[:] = np.sum(np.multiply(self.TF_left_blocked,self.FDL_left), axis=0)
+        self.resultRightFreq[:] = np.sum(np.multiply(self.TF_right_blocked,self.FDL_right), axis=0)
 
         # Also convolute old filter if interpolation needed
         if self.interpolate:

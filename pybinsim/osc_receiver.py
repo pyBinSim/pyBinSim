@@ -32,7 +32,7 @@ class OscReceiver(object):
     Class for receiving OSC Messages to control pyBinSim
     """
 
-    def __init__(self):
+    def __init__(self,current_config):
 
         self.log = logging.getLogger("pybinsim.OscReceiver")
         self.log.info("oscReceiver: init")
@@ -41,6 +41,8 @@ class OscReceiver(object):
         self.ip = '127.0.0.1'
         self.port = 10000
         self.maxChannels = 100
+
+        self.currentConfig = current_config
 
         # Default values; Stores filter keys for all channles/convolvers
         self.filters_updated = [True] * self.maxChannels
@@ -54,6 +56,9 @@ class OscReceiver(object):
         osc_dispatcher = dispatcher.Dispatcher()
         osc_dispatcher.map("/pyBinSim", self.handle_filter_input)
         osc_dispatcher.map("/pyBinSimFile", self.handle_file_input)
+        osc_dispatcher.map("/pyBinSimPauseAudioPlayback", self.handle_audio_pause)
+        osc_dispatcher.map("/pyBinSimPauseConvolution", self.handle_convolution_pause)
+
 
         self.server = osc_server.ThreadingOSCUDPServer(
             (self.ip, self.port), osc_dispatcher)
@@ -97,6 +102,18 @@ class OscReceiver(object):
         self.log.info("soundPath: {}".format(soundpath))
         self.soundFileList = soundpath
 
+    def handle_audio_pause(self, identifier, value):
+        """ Handler for playback control"""
+        assert identifier == "/pyBinSimPauseAudioPlayback"
+
+        self.currentConfig.set('pauseAudioPlayback', value)
+
+    def handle_convolution_pause(self, identifier, value):
+        """ Handler for playback control"""
+        assert identifier == "/pyBinSimPauseConvolution"
+
+        self.currentConfig.set('pauseConvolution', value)
+
     def start_listening(self):
         """Start osc receiver in background Thread"""
 
@@ -114,6 +131,9 @@ class OscReceiver(object):
         """ Return key for filter """
         self.filters_updated[channel] = False
         return self.valueList[channel]
+
+    def get_current_config(self):
+        return self.currentConfig
 
     def get_sound_file_list(self):
         ret_list = self.soundFileList
