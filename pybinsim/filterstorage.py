@@ -22,6 +22,7 @@
 
 import logging
 import multiprocessing
+import enum
 
 import numpy as np
 import soundfile as sf
@@ -34,12 +35,25 @@ nThreads = multiprocessing.cpu_count()
 class Filter(object):
 
     def __init__(self, inputfilter, irBlocks, block_size):
+        self.ir_blocks = irBlocks
         self.IR_left_blocked = np.reshape(inputfilter[:, 0], (irBlocks, block_size))
         self.IR_right_blocked = np.reshape(inputfilter[:, 1], (irBlocks, block_size))
 
     def getFilter(self):
         return self.IR_left_blocked, self.IR_right_blocked
 
+    def apply_fadeout(self,window):
+        self.IR_left_blocked[self.ir_blocks-1, :] = np.multiply(self.IR_left_blocked[self.ir_blocks-1, :], window)
+        self.IR_right_blocked[self.ir_blocks-1, :] = np.multiply(self.IR_right_blocked[self.ir_blocks-1, :], window)
+
+    def apply_fadein(self,window):
+        self.IR_left_blocked[0, :] = np.multiply(self.IR_left_blocked[0, :], window)
+        self.IR_right_blocked[0, :] = np.multiply(self.IR_right_blocked[0, :], window)
+
+class FilterType(enum.Enum):
+    Undefined = 0
+    Filter = 1
+    LateReverbFilter = 2
 
 class FilterStorage(object):
     """ Class for storing all filters mentioned in the filter list """
@@ -54,6 +68,11 @@ class FilterStorage(object):
         self.block_size = block_size
         self.default_filter = Filter(np.zeros((self.ir_size, 2), dtype='float32'),self.ir_blocks,self.block_size)
 
+        # Calculate COSINE-Square crossfade windows
+        self.crossFadeOut = np.array(range(0, self.block_size), dtype='float32')
+        self.crossFadeOut = np.square(np.cos(self.crossFadeOut/(self.block_size-1)*(np.pi/2)))
+        self.crossFadeIn = np.flipud(self.crossFadeOut)
+
         self.useHeadphoneFilter = useHeadphoneFilter
         if useHeadphoneFilter:
             self.headPhoneFilterSize = headphoneFilterSize
@@ -63,15 +82,16 @@ class FilterStorage(object):
         if useSplittedFilters:
             self.lateReverbSize = lateReverbSize
             self.late_ir_blocks = lateReverbSize // block_size
+            self.default_late_reverb_filter = Filter(np.zeros((self.lateReverbSize, 2), dtype='float32'), self.late_ir_blocks, self.block_size)
 
         self.filter_list_path = filter_list_name
         self.filter_list = open(self.filter_list_path, 'r')
 
         self.headphone_filter = None
-        self.late_reverb_filter = None
 
         # format: [key,{filter}]
         self.filter_dict = {}
+        self.late_reverb_filter_dict = {}
 
         # Start to load filters
         self.load_filters()
@@ -99,6 +119,7 @@ class FilterStorage(object):
             line_content = line.split()
             filter_path = line_content[-1]
 
+            # handle headphone filter
             if line.startswith('HPFILTER') and self.useHeadphoneFilter:
                 self.log.info("Loading headphone filter: {}".format(filter_path))
                 self.headphone_filter = Filter(self.load_filter(filter_path), self.headphone_ir_blocks, self.block_size)
@@ -107,20 +128,20 @@ class FilterStorage(object):
                 self.log.info("Skipping headphone filter: {}".format(filter_path))
                 continue
 
+            # handle normal filters and late reverb filters
+            filter_value_list = tuple(line_content[1:-1])
+            filter_pose = Pose.from_filterValueList(filter_value_list)
+            filter_type = FilterType.Undefined
+
+            if line.startswith('FILTER'):
+                filter_type = FilterType.Filter
+
             if line.startswith('LATEREVERB') and self.useSplittedFilters:
-                self.log.info("Loading late reveerb filter: {}".format(filter_path))
-                self.late_reverb_filter = Filter(self.load_filter(filter_path), self.late_ir_blocks, self.block_size)
-                continue
-            elif line.startswith('LATEREVERB'):
-                self.log.info("Skipping late reverb filter: {}".format(filter_path))
-                continue
+                self.log.info("Loading late reverb filter: {}".format(filter_path))
+                filter_type = FilterType.LateReverbFilter
 
 
-            filter_value_list = tuple(line_content[0:-1])
-
-            pose = Pose.from_filterValueList(filter_value_list)
-
-            yield pose, filter_path
+            yield filter_pose, filter_path, filter_type
 
     def load_filters(self):
         """
@@ -131,17 +152,38 @@ class FilterStorage(object):
 
         self.log.info("Start loading filters...")
 
-        for i, (pose, filter_path) in enumerate(self.parse_filter_list()):
+        for i, (filter_pose, filter_path, filter_type) in enumerate(self.parse_filter_list()):
+
+            if filter_type == FilterType.Undefined:
+                continue
+
             self.log.debug('Loading {}'.format(filter_path))
 
-            current_filter = Filter(self.load_filter(filter_path), self.ir_blocks, self.block_size)
+            if filter_type == FilterType.Filter:
+                ## preprocess filters and put them in a dict
+                current_filter = Filter(self.load_filter(filter_path), self.ir_blocks, self.block_size)
 
-            # create key and store in dict.
-            key = pose.create_key()
-            self.filter_dict.update({key: current_filter})
+                # Apply fade out to all filters
+                current_filter.apply_fadeout(self.crossFadeOut)
+
+                # create key and store in dict.
+                key = filter_pose.create_key()
+                self.filter_dict.update({key: current_filter})
+
+            if filter_type == FilterType.LateReverbFilter:
+                ## preprocess late reverb filters and put them in a seperate dict
+                current_filter = Filter(self.load_filter(filter_path), self.late_ir_blocks, self.block_size)
+
+                # Apply fade in to all late reverb filters
+                current_filter.apply_fadein(self.crossFadeIn)
+
+                # create key and store in dict.
+                key = filter_pose.create_key()
+                self.late_reverb_filter_dict.update({key: current_filter})
 
         self.log.info("Finished loading filters.")
         #self.log.info("filter_dict size: {}MiB".format(total_size(self.filter_dict) // 1024 // 1024))
+
 
     def get_filter(self, pose):
         """
@@ -161,6 +203,16 @@ class FilterStorage(object):
             self.log.warning('Filter not found: key: {}'.format(key))
             return self.default_filter
 
+    def get_late_reverb_filter(self,pose):
+        key = pose.create_key()
+
+        if key in self.late_reverb_filter_dict:
+            self.log.info('Late Reverb Filter found: key: {}'.format(key))
+            return self.late_reverb_filter_dict.get(key)
+        else:
+            self.log.warning('Late Reverb Filter not found: key: {}'.format(key))
+            return self.default_late_reverb_filter
+
     def close(self):
         self.log.info('FilterStorage: close()')
         # TODO: do something in here?
@@ -170,12 +222,6 @@ class FilterStorage(object):
             raise RuntimeError("Headphone filter not loaded")
 
         return self.headphone_filter
-
-    def get_latereverb_filter(self):
-        if self.late_reverb_filter is None:
-            raise RuntimeError("Late reverb filter not loaded")
-
-        return self.late_reverb_filter
 
     def load_filter(self, filter_path):
 

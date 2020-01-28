@@ -179,9 +179,6 @@ class BinSim(object):
         convolvers = [None] * self.config.get('maxChannels')
         for n in range(self.config.get('maxChannels')):
             convolvers[n] = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), False, self.config.get('useSplittedFilters'), self.config.get('lateReverbSize'))
-            if self.config.get('useSplittedFilters'):
-                latereverbfilter = filterStorage.get_latereverb_filter()
-                convolvers[n].setLateReverb(latereverbfilter)
 
         # HP Equalization convolver
         convolverHP = None
@@ -246,14 +243,20 @@ def audio_callback(binsim):
                 binsim.result[:, 0] = mix
                 binsim.result[:, 1] = mix
         else:
-            # Update Filters and run each convolver with the current blockh
+            # Update Filters and run each convolver with the current block
             for n in range(binsim.soundHandler.get_sound_channels()):
 
                 # Get new Filter
                 if binsim.oscReceiver.is_filter_update_necessary(n):
-                    filterValueList = binsim.oscReceiver.get_current_values(n)
+                    filterValueList = binsim.oscReceiver.get_current_filter_values(n)
                     filter = binsim.filterStorage.get_filter(Pose.from_filterValueList(filterValueList))
                     binsim.convolvers[n].setIR(filter, callback.config.get('enableCrossfading'))
+
+                # Get new late reverb Filter
+                if binsim.oscReceiver.is_late_reverb_update_necessary(n):
+                    lateReverbValueList = binsim.oscReceiver.get_current_late_reverb_values(n)
+                    latereverbfilter = binsim.filterStorage.get_late_reverb_filter(Pose.from_filterValueList(lateReverbValueList))
+                    binsim.convolvers[n].setLateReverb(latereverbfilter)
 
                 left, right = binsim.convolvers[n].process(binsim.block[n, :])
 

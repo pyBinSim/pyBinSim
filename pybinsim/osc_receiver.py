@@ -46,15 +46,21 @@ class OscReceiver(object):
 
         # Default values; Stores filter keys for all channles/convolvers
         self.filters_updated = [True] * self.maxChannels
+        self.late_reverb_filters_updated = [True] * self.maxChannels
 
-        self.defaultValue = (0, 0, 0, 0, 0, 0, 0, 0, 0)
-        self.valueList = [self.defaultValue] * self.maxChannels
+        self.default_filter_value = (0, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.valueList_filter = [self.default_filter_value] * self.maxChannels
+
+        self.default_late_reverb_value = (0, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.valueList_late_reverb = [self.default_late_reverb_value] * self.maxChannels
+
         # self.valueList = [()] * self.maxChannels
         self.soundFileList = ''
         self.soundFileNew = False
 
         osc_dispatcher = dispatcher.Dispatcher()
-        osc_dispatcher.map("/pyBinSim", self.handle_filter_input)
+        osc_dispatcher.map("/pyBinSimFilter", self.handle_filter_input)
+        osc_dispatcher.map("/pyBinSimLateReverbFilter", self.handle_late_reverb_input)
         osc_dispatcher.map("/pyBinSimFile", self.handle_file_input)
         osc_dispatcher.map("/pyBinSimPauseAudioPlayback", self.handle_audio_pause)
         osc_dispatcher.map("/pyBinSimPauseConvolution", self.handle_convolution_pause)
@@ -73,7 +79,7 @@ class OscReceiver(object):
         :return:
         """
 
-        assert identifier == "/pyBinSim"
+        assert identifier == "/pyBinSimFilter"
         # assert all(isinstance(x, int) for x in args) == True
 
         # Extend value list to support older scripts
@@ -86,12 +92,36 @@ class OscReceiver(object):
 
         current_channel = channel
 
-        if args != self.valueList[current_channel]:
+        if args != self.valueList_filter[current_channel]:
             #self.log.info("new filter")
             self.filters_updated[current_channel] = True
-            self.valueList[current_channel] = tuple(args)
+            self.valueList_filter[current_channel] = tuple(args)
         else:
             self.log.info("same filter as before")
+
+    def handle_late_reverb_input(self, identifier, channel, *args):
+        """
+        Handler for tracking information
+
+        :param identifier:
+        :param channel:
+        :param args:
+        :return:
+        """
+
+        assert identifier == "/pyBinSimLateReverbFilter"
+
+        self.log.info("Channel: {}".format(str(channel)))
+        self.log.info("Args: {}".format(str(args)))
+
+        current_channel = channel
+
+        if args != self.valueList_late_reverb[current_channel]:
+            #self.log.info("new late reverb filter")
+            self.late_reverb_filters_updated[current_channel] = True
+            self.valueList_late_reverb[current_channel] = tuple(args)
+        else:
+            self.log.info("same late reverb filter as before")
 
     def handle_file_input(self, identifier, soundpath):
         """ Handler for playlist control"""
@@ -127,10 +157,22 @@ class OscReceiver(object):
         """ Check if there is a new filter for channel """
         return self.filters_updated[channel]
 
-    def get_current_values(self, channel):
+    def is_late_reverb_update_necessary(self, channel):
+        """ Check if there is a new late reverb filter for channel """
+        if self.currentConfig.get('useSplittedFilters'):
+            return self.late_reverb_filters_updated[channel]
+        else:
+            return False
+
+    def get_current_filter_values(self, channel):
         """ Return key for filter """
         self.filters_updated[channel] = False
-        return self.valueList[channel]
+        return self.valueList_filter[channel]
+
+    def get_current_late_reverb_values(self, channel):
+        """ Return key for late reverb filters """
+        self.late_reverb_filters_updated[channel] = False
+        return self.valueList_late_reverb[channel]
 
     def get_current_config(self):
         return self.currentConfig
