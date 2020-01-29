@@ -256,7 +256,7 @@ def audio_callback(binsim):
                 if binsim.oscReceiver.is_late_reverb_update_necessary(n):
                     lateReverbValueList = binsim.oscReceiver.get_current_late_reverb_values(n)
                     latereverbfilter = binsim.filterStorage.get_late_reverb_filter(Pose.from_filterValueList(lateReverbValueList))
-                    binsim.convolvers[n].setLateReverb(latereverbfilter)
+                    binsim.convolvers[n].setLateReverb(latereverbfilter, callback.config.get('enableCrossfading'))
 
                 left, right = binsim.convolvers[n].process(binsim.block[n, :])
 
