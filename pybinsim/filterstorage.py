@@ -27,6 +27,8 @@ import enum
 import numpy as np
 import soundfile as sf
 
+import pyfftw
+
 from pybinsim.pose import Pose
 from pybinsim.utility import total_size
 
@@ -35,12 +37,32 @@ nThreads = multiprocessing.cpu_count()
 class Filter(object):
 
     def __init__(self, inputfilter, irBlocks, block_size):
+
+        self.log = logging.getLogger("pybinsim.Filter")
+
         self.ir_blocks = irBlocks
+        self.block_size = block_size
+
+        self.TF_blocks = irBlocks
+        self.TF_block_size = block_size + 1
+
         self.IR_left_blocked = np.reshape(inputfilter[:, 0], (irBlocks, block_size))
         self.IR_right_blocked = np.reshape(inputfilter[:, 1], (irBlocks, block_size))
 
-    def getFilter(self):
-        return self.IR_left_blocked, self.IR_right_blocked
+        self.fd_available = False
+        self.TF_left_blocked = None
+        self.TF_right_blocked = None
+
+    def getFilterTD(self):
+        if self.fd_available:
+            self.log.warning("FilterStorage: No time domain filter available!")
+            left = np.zeros((self.ir_blocks, self.block_size))
+            right = np.zeros((self.ir_blocks, self.block_size))
+        else:
+            left = self.IR_left_blocked
+            right = self.IR_right_blocked
+
+        return left, right
 
     def apply_fadeout(self,window):
         self.IR_left_blocked[self.ir_blocks-1, :] = np.multiply(self.IR_left_blocked[self.ir_blocks-1, :], window)
@@ -49,6 +71,31 @@ class Filter(object):
     def apply_fadein(self,window):
         self.IR_left_blocked[0, :] = np.multiply(self.IR_left_blocked[0, :], window)
         self.IR_right_blocked[0, :] = np.multiply(self.IR_right_blocked[0, :], window)
+
+    def storeInFDomain(self,fftw_plan):
+        self.TF_left_blocked = np.zeros((self.ir_blocks, self.block_size + 1), dtype='complex64')
+        self.TF_right_blocked = np.zeros((self.ir_blocks, self.block_size + 1), dtype='complex64')
+        for ir_block_count in range(self.ir_blocks):
+            self.TF_left_blocked[ir_block_count, :] = fftw_plan(self.IR_left_blocked[ir_block_count, :])
+            self.TF_right_blocked[ir_block_count, :] = fftw_plan(self.IR_right_blocked[ir_block_count, :])
+
+        self.fd_available = True
+
+        # Discard time domain data
+        self.IR_left_blocked = None
+        self.IR_right_blocked = None
+
+    def getFilterFD(self):
+        if not self.fd_available:
+            self.log.warning("FilterStorage: No frequency domain filter available!")
+            left = np.zeros((self.ir_blocks, self.block_size+1))
+            right = np.zeros((self.ir_blocks, self.block_size+1))
+        else:
+            left = self.TF_left_blocked
+            right = self.TF_right_blocked
+
+        return left, right
+
 
 class FilterType(enum.Enum):
     Undefined = 0
@@ -63,10 +110,19 @@ class FilterStorage(object):
         self.log = logging.getLogger("pybinsim.FilterStorage")
         self.log.info("FilterStorage: init")
 
+        pyfftw.interfaces.cache.enable()
+        fftw_planning_effort ='FFTW_ESTIMATE'
+
         self.ir_size = irSize
         self.ir_blocks = irSize // block_size
         self.block_size = block_size
+
+        self.filter_fftw_plan = pyfftw.builders.rfft(np.zeros(self.block_size),n=self.block_size * 2, overwrite_input=True,
+                                                     threads=nThreads, planner_effort=fftw_planning_effort,
+                                                     avoid_copy=False)
+
         self.default_filter = Filter(np.zeros((self.ir_size, 2), dtype='float32'),self.ir_blocks,self.block_size)
+        self.default_filter.storeInFDomain(self.filter_fftw_plan)
 
         # Calculate COSINE-Square crossfade windows
         self.crossFadeOut = np.array(range(0, self.block_size), dtype='float32')
@@ -83,6 +139,7 @@ class FilterStorage(object):
             self.lateReverbSize = lateReverbSize
             self.late_ir_blocks = lateReverbSize // block_size
             self.default_late_reverb_filter = Filter(np.zeros((self.lateReverbSize, 2), dtype='float32'), self.late_ir_blocks, self.block_size)
+            self.default_late_reverb_filter.storeInFDomain(self.filter_fftw_plan)
 
         self.filter_list_path = filter_list_name
         self.filter_list = open(self.filter_list_path, 'r')
@@ -123,6 +180,8 @@ class FilterStorage(object):
             if line.startswith('HPFILTER') and self.useHeadphoneFilter:
                 self.log.info("Loading headphone filter: {}".format(filter_path))
                 self.headphone_filter = Filter(self.load_filter(filter_path), self.headphone_ir_blocks, self.block_size)
+                self.headphone_filter.storeInFDomain(self.filter_fftw_plan)
+
                 continue
             elif line.startswith('HPFILTER') :
                 self.log.info("Skipping headphone filter: {}".format(filter_path))
@@ -135,11 +194,12 @@ class FilterStorage(object):
 
             if line.startswith('FILTER'):
                 filter_type = FilterType.Filter
-
-            if line.startswith('LATEREVERB') and self.useSplittedFilters:
+            elif line.startswith('LATEREVERB') and self.useSplittedFilters:
                 self.log.info("Loading late reverb filter: {}".format(filter_path))
                 filter_type = FilterType.LateReverbFilter
-
+            else:
+                filter_type = FilterType.Undefined
+                raise RuntimeError("Filter indentifier wrong or missing")
 
             yield filter_pose, filter_path, filter_type
 
@@ -166,6 +226,8 @@ class FilterStorage(object):
                 # Apply fade out to all filters
                 current_filter.apply_fadeout(self.crossFadeOut)
 
+                current_filter.storeInFDomain(self.filter_fftw_plan)
+
                 # create key and store in dict.
                 key = filter_pose.create_key()
                 self.filter_dict.update({key: current_filter})
@@ -176,6 +238,9 @@ class FilterStorage(object):
 
                 # Apply fade in to all late reverb filters
                 current_filter.apply_fadein(self.crossFadeIn)
+
+                # testing
+                current_filter.storeInFDomain(self.filter_fftw_plan)
 
                 # create key and store in dict.
                 key = filter_pose.create_key()

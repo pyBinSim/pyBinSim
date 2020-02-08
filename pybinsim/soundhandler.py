@@ -101,7 +101,7 @@ class SoundHandler(object):
 
         while True:
             if self.new_sound_file_request:
-                self.log.info('Loading new sound file')
+                #self.log.info('Loading new sound file')
                 audio_file_data, fs = sf.read(self.soundPath, dtype='float32', )
                 assert fs == self.fs
 
