@@ -102,14 +102,33 @@ pauseAudioPlayback:
 OSC Messages and filter lists:
 ------------------------------
 
-Example line from filter list:
-165 2 0 0 0 0 brirs/kemar5/kemar_0_165.wav
+Example lines from filter list:
 
-To activate this filter for the third channel (counting starts at zero) for your wav file you have to send the following message to the pc where pyBinSim runs (port 10000):
+HPFILTER hpirs/DT990_EQ_filter_2ch.wav
+
+FILTER 165 2 0 0 0 0 0 0 0 brirs/kemar_0_165.wav
+
+LATEREVERB 0 2 0 0 0 0 0 0 0 brirs/late_reverb.wav
+
+Lines with the prefix FILTER or LATEREVERB contain a 'filter key' which consist of 6 or 9 positive numbers. These numbers
+can be arbitrarily assigned to suit your use case. They are used to tell pyBinSim which filter to apply.
+The filter behind the prefix HPFILTER will be loaded and applied automatically when useHeadphoneFilter == True.
+Lines which start with FILTER or LATEREVERB have to be called via OSC commands to become active.
+To activate a FILTER for the third channel of your wav file you have to send the the identifier
+'/pyBinSimFilter', followed by a 2 (corresponding to the third channel) and followed by the nine 9 (or six) key numbers from the filter list
+to the pc where pyBinSim runs (UDP, port 10000):
 
 ::
 
-    /pyBinSim 2 165 2 0 0 0 0
+    /pyBinSimFilter 2 165 2 0 0 0 0 0 0 0
+
+When you have set useSplittedFilters == True, you can also apply a late reverb filter. This filter gets attached to the
+activated FILTER (crossfade with the size of a blocksize). Be careful to make sure you always have combined the FILTER
+and LATEREVERB you intended - pyBinSim will combine the filters blindly. Example:
+
+::
+
+    /pyBinSimLateReverbFilter 2 2 0 0 0 0 0 0 0
         
 When you want to play another sound file you send:
 
@@ -117,7 +136,7 @@ When you want to play another sound file you send:
 
     /pyBinSimFile folder/file_new.wav
 
-Or a sound file list
+Or a sound file list:
 
 ::
 
@@ -128,13 +147,13 @@ The audiofile has to be located on the pc where pyBinSim runs. Files are not tra
 Further OSC Messages:
 ------------------------------
 
-Pause audio playback. Send 'True' or 'False'
+Pause audio playback. Send 'True' or 'False' (as string, not bool)
 
 ::
 
     /pyBinSimPauseAudioPlayback 'True'
 
-Bypass convolution. Send 'True' or 'False'
+Bypass convolution. Send 'True' or 'False' (as string, not bool)
 
 ::
 
@@ -144,7 +163,7 @@ Bypass convolution. Send 'True' or 'False'
 Demos
 -----
 
-Check the https://github.com/pyBinSim/AppExamples repository for ready-to-use demos.
+DEPRECATED for this version: Check the https://github.com/pyBinSim/AppExamples repository for ready-to-use demos.
 
 
 
