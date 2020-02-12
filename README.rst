@@ -104,11 +104,11 @@ OSC Messages and filter lists:
 
 Example lines from filter list:
 
-HPFILTER hpirs/DT990_EQ_filter_2ch.wav
+::
 
-FILTER 165 2 0 0 0 0 0 0 0 brirs/kemar_0_165.wav
-
-LATEREVERB 0 2 0 0 0 0 0 0 0 brirs/late_reverb.wav
+    HPFILTER hpirs/DT990_EQ_filter_2ch.wav
+    FILTER 165 2 0 0 0 0 0 0 0 brirs/kemar_0_165.wav
+    LATEREVERB 0 2 0 0 0 0 0 0 0 brirs/late_reverb.wav
 
 Lines with the prefix FILTER or LATEREVERB contain a 'filter key' which consist of 6 or 9 positive numbers. These numbers
 can be arbitrarily assigned to suit your use case. They are used to tell pyBinSim which filter to apply.
