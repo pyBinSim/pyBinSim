@@ -128,7 +128,7 @@ and LATEREVERB you intended - pyBinSim will combine the filters blindly. Example
 
 ::
 
-    /pyBinSimLateReverbFilter 2 2 0 0 0 0 0 0 0
+    /pyBinSimLateReverbFilter 2 0 2 0 0 0 0 0 0 0
         
 When you want to play another sound file you send:
 
