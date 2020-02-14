@@ -231,7 +231,7 @@ def audio_callback(binsim):
 
         # Get sound block.
         if binsim.current_config.get('pauseAudioPlayback'):
-            binsim.block[:binsim.soundHandler.get_sound_channels(), :]= binsim.soundHandler.read_zeros()
+            binsim.block[:binsim.soundHandler.get_sound_channels(), :] = binsim.soundHandler.read_zeros()
         else:
             binsim.block[:binsim.soundHandler.get_sound_channels(), :] = binsim.soundHandler.buffer_read()
 

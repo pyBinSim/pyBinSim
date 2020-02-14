@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import logging
-import multiprocessing
+import multiprocessing as mp
 import enum
 
 import numpy as np
@@ -32,7 +32,7 @@ import pyfftw
 from pybinsim.pose import Pose
 from pybinsim.utility import total_size
 
-nThreads = multiprocessing.cpu_count()
+nThreads = mp.cpu_count()
 
 class Filter(object):
 
@@ -153,6 +153,7 @@ class FilterStorage(object):
         # Start to load filters
         self.load_filters()
 
+
     def parse_filter_list(self):
         """
         Generator for filter list lines
@@ -197,6 +198,9 @@ class FilterStorage(object):
             elif line.startswith('LATEREVERB') and self.useSplittedFilters:
                 self.log.info("Loading late reverb filter: {}".format(filter_path))
                 filter_type = FilterType.LateReverbFilter
+            elif line.startswith('LATEREVERB'):
+                self.log.info("Skipping LATEREVERB filter: {}".format(filter_path))
+                continue
             else:
                 filter_type = FilterType.Undefined
                 raise RuntimeError("Filter indentifier wrong or missing")
@@ -302,3 +306,5 @@ class FilterStorage(object):
         #    current_filter = np.concatenate((current_filter, np.zeros((self.ir_size - filter_size[0], 2))), 0)
 
         return current_filter
+
+        #return sf.read(filter_path, dtype='float32')[0]
