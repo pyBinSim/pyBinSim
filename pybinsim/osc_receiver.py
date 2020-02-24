@@ -22,6 +22,7 @@
 
 import logging
 import threading
+import numpy as np
 
 from pythonosc import dispatcher
 from pythonosc import osc_server
@@ -48,11 +49,11 @@ class OscReceiver(object):
         self.filters_updated = [True] * self.maxChannels
         self.late_reverb_filters_updated = [True] * self.maxChannels
 
-        self.default_filter_value = (0, 0, 0, 0, 0, 0, 0, 0, 0)
-        self.valueList_filter = [self.default_filter_value] * self.maxChannels
+        self.default_filter_value = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0])
+        self.valueList_filter = np.tile(self.default_filter_value, [self.maxChannels, 1])
 
-        self.default_late_reverb_value = (0, 0, 0, 0, 0, 0, 0, 0, 0)
-        self.valueList_late_reverb = [self.default_late_reverb_value] * self.maxChannels
+        self.default_late_reverb_value = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0])
+        self.valueList_late_reverb = np.tile(self.default_late_reverb_value, [self.maxChannels, 1])
 
         # self.valueList = [()] * self.maxChannels
         self.soundFileList = ''
@@ -60,7 +61,13 @@ class OscReceiver(object):
 
         osc_dispatcher = dispatcher.Dispatcher()
         osc_dispatcher.map("/pyBinSimFilter", self.handle_filter_input)
+        osc_dispatcher.map("/pyBinSimFilterOrientation", self.handle_filter_input)
+        osc_dispatcher.map("/pyBinSimFilterPosition", self.handle_filter_input)
+        osc_dispatcher.map("/pyBinSimFilterCustom", self.handle_filter_input)
         osc_dispatcher.map("/pyBinSimLateReverbFilter", self.handle_late_reverb_input)
+        osc_dispatcher.map("/pyBinSimLateReverbFilterOrientation", self.handle_late_reverb_input)
+        osc_dispatcher.map("/pyBinSimLateReverbFilterPosition", self.handle_late_reverb_input)
+        osc_dispatcher.map("/pyBinSimLateReverbFilterCustom", self.handle_late_reverb_input)
         osc_dispatcher.map("/pyBinSimFile", self.handle_file_input)
         osc_dispatcher.map("/pyBinSimPauseAudioPlayback", self.handle_audio_pause)
         osc_dispatcher.map("/pyBinSimPauseConvolution", self.handle_convolution_pause)
@@ -68,6 +75,19 @@ class OscReceiver(object):
 
         self.server = osc_server.ThreadingOSCUDPServer(
             (self.ip, self.port), osc_dispatcher)
+
+    def select_slice(self, i):
+        switcher = {
+            "/pyBinSimFilter": slice(0, 9),
+            "/pyBinSimFilterOrientation": slice(0, 3),
+            "/pyBinSimFilterPosition": slice(3, 6),
+            "/pyBinSimFilterCustom": slice(6, 9),
+            "/pyBinSimLateReverbFilter": slice(0, 9),
+            "/pyBinSimLateReverbFilterOrientation": slice(0, 3),
+            "/pyBinSimLateReverbFilterPosition": slice(3, 6),
+            "/pyBinSimLateReverbFilterCustom": slice(6, 9)
+        }
+        return switcher.get(i, [])
 
     def handle_filter_input(self, identifier, channel, *args):
         """
@@ -79,7 +99,7 @@ class OscReceiver(object):
         :return:
         """
 
-        assert identifier == "/pyBinSimFilter"
+        #assert identifier == ("/pyBinSimFilter", "/pyBinSimFilterOrientation", "/pyBinSimFilterPosition","/pyBinSimFilterCustom")
         # assert all(isinstance(x, int) for x in args) == True
 
         # Extend value list to support older scripts
@@ -88,16 +108,17 @@ class OscReceiver(object):
         #    print("filter value list incomplete")
 
         self.log.info("Channel: {}".format(str(channel)))
-        self.log.info("Args: {}".format(str(args)))
+        #self.log.info("Args: {}".format(str(args)))
 
         current_channel = channel
 
-        if args != self.valueList_filter[current_channel]:
+        if (args != self.valueList_late_reverb[current_channel, self.select_slice(identifier)]).any():
             #self.log.info("new filter")
             self.filters_updated[current_channel] = True
-            self.valueList_filter[current_channel] = tuple(args)
-        else:
-            self.log.info("same filter as before")
+            self.valueList_filter[current_channel, self.select_slice(identifier)] = args
+            self.log.info("Current Filter List: {}".format(str(self.valueList_filter[current_channel,:])))
+        #else:
+        #    self.log.info("same filter as before")
 
     def handle_late_reverb_input(self, identifier, channel, *args):
         """
@@ -109,19 +130,20 @@ class OscReceiver(object):
         :return:
         """
 
-        assert identifier == "/pyBinSimLateReverbFilter"
+        #assert identifier == "/pyBinSimLateReverbFilter"
 
         self.log.info("Channel: {}".format(str(channel)))
-        self.log.info("Args: {}".format(str(args)))
+        #self.log.info("Args: {}".format(str(args)))
 
         current_channel = channel
 
-        if args != self.valueList_late_reverb[current_channel]:
+        if (args != self.valueList_late_reverb[current_channel,self.select_slice(identifier)]).any():
             #self.log.info("new late reverb filter")
             self.late_reverb_filters_updated[current_channel] = True
-            self.valueList_late_reverb[current_channel] = tuple(args)
-        else:
-            self.log.info("same late reverb filter as before")
+            self.valueList_late_reverb[current_channel, self.select_slice(identifier)] = args
+            self.log.info("Current Late Reverb Filter List: {}".format(str(self.valueList_late_reverb[current_channel,:])))
+        #else:
+        #    self.log.info("same late reverb filter as before")
 
     def handle_file_input(self, identifier, soundpath):
         """ Handler for playlist control"""
@@ -167,12 +189,12 @@ class OscReceiver(object):
     def get_current_filter_values(self, channel):
         """ Return key for filter """
         self.filters_updated[channel] = False
-        return self.valueList_filter[channel]
+        return self.valueList_filter[channel,:]
 
     def get_current_late_reverb_values(self, channel):
         """ Return key for late reverb filters """
         self.late_reverb_filters_updated[channel] = False
-        return self.valueList_late_reverb[channel]
+        return self.valueList_late_reverb[channel,:]
 
     def get_current_config(self):
         return self.currentConfig
