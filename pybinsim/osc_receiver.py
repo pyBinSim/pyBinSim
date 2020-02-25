@@ -81,12 +81,12 @@ class OscReceiver(object):
     def select_slice(self, i):
         switcher = {
             "/pyBinSimFilter": slice(0, 9),
-            "/pyBinSimFilterShort": slice(0, 6), # To support older filter lists
+            "/pyBinSimFilterShort": slice(0, 6),
             "/pyBinSimFilterOrientation": slice(0, 3),
             "/pyBinSimFilterPosition": slice(3, 6),
             "/pyBinSimFilterCustom": slice(6, 9),
             "/pyBinSimLateReverbFilter": slice(0, 9),
-            "/pyBinSimLateReverbFilterShort": slice(0, 6),  # To support older filter lists
+            "/pyBinSimLateReverbFilterShort": slice(0, 6),
             "/pyBinSimLateReverbFilterOrientation": slice(0, 3),
             "/pyBinSimLateReverbFilterPosition": slice(3, 6),
             "/pyBinSimLateReverbFilterCustom": slice(6, 9)
