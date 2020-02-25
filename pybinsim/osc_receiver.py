@@ -113,12 +113,12 @@ class OscReceiver(object):
         current_channel = channel
 
         if (args != self.valueList_filter[current_channel, self.select_slice(identifier)]).any():
-            #self.log.info("new filter")
             self.filters_updated[current_channel] = True
             self.valueList_filter[current_channel, self.select_slice(identifier)] = args
         #else:
         #    self.log.info("same filter as before")
 
+        self.log.debug("Filter new?: " + str(self.filters_updated[current_channel]))
         self.log.info("Channel: {}".format(str(channel)))
         self.log.info("Current Filter List: {}".format(str(self.valueList_filter[current_channel, :])))
 
@@ -138,12 +138,12 @@ class OscReceiver(object):
         current_channel = channel
 
         if (args != self.valueList_late_reverb[current_channel,self.select_slice(identifier)]).any():
-            #self.log.info("new late reverb filter")
             self.late_reverb_filters_updated[current_channel] = True
             self.valueList_late_reverb[current_channel, self.select_slice(identifier)] = args
         #else:
         #    self.log.info("same late reverb filter as before")
 
+        self.log.debug("Filter new?: " + str(self.late_reverb_filters_updated[current_channel]))
         self.log.info("Channel: {}".format(str(channel)))
         self.log.info("Current Late Reverb Filter List: {}".format(str(self.valueList_late_reverb[current_channel, :])))
 
