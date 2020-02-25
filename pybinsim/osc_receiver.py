@@ -112,7 +112,7 @@ class OscReceiver(object):
 
         current_channel = channel
 
-        if (args != self.valueList_late_reverb[current_channel, self.select_slice(identifier)]).any():
+        if (args != self.valueList_filter[current_channel, self.select_slice(identifier)]).any():
             #self.log.info("new filter")
             self.filters_updated[current_channel] = True
             self.valueList_filter[current_channel, self.select_slice(identifier)] = args
