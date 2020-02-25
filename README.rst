@@ -115,7 +115,7 @@ can be arbitrarily assigned to suit your use case. They are used to tell pyBinSi
 The filter behind the prefix HPFILTER will be loaded and applied automatically when useHeadphoneFilter == True.
 Lines which start with FILTER or LATEREVERB have to be called via OSC commands to become active.
 To activate a FILTER for the third channel of your wav file you have to send the the identifier
-'/pyBinSimFilter', followed by a 2 (corresponding to the third channel) and followed by the nine 9 (or six) key numbers from the filter list
+'/pyBinSimFilter', followed by a 2 (corresponding to the third channel) and followed by the nine 9 key numbers from the filter list
 to the pc where pyBinSim runs (UDP, port 10000):
 
 ::
@@ -159,6 +159,21 @@ Bypass convolution. Send 'True' or 'False' (as string, not bool)
 
     /pyBinSimPauseConvolution 'True'
 
+If you need more flexibility for changing filters, the following commands can be used to change only parts of the requested filter list
+
+::
+
+    /pyBinSimFilterOrientation 1 0 2 0
+    /pyBinSimFilterPosition 1 1 2 3
+    /pyBinSimFilterCustom 1 4 5 6
+
+    /pyBinSimLateReverbFilterOrientation 1 0 2 0
+    /pyBinSimLateReverbFilterPosition 1 1 2 3
+    /pyBinSimLateReverbFilterCustom 1 4 5 6
+
+* \*Orientation changes the first three numbers of the filter list applied to channel 1
+* \*Position changes numbers 3 to 6 of the filter list applied to channel 1
+* \*Custom  changes numbers 7 to 9  of the filter list applied to channel 1
 
 Demos
 -----
