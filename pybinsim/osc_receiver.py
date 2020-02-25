@@ -107,7 +107,7 @@ class OscReceiver(object):
         #    args=(args+(0,)*6)[:6]
         #    print("filter value list incomplete")
 
-        self.log.info("Channel: {}".format(str(channel)))
+
         #self.log.info("Args: {}".format(str(args)))
 
         current_channel = channel
@@ -116,9 +116,11 @@ class OscReceiver(object):
             #self.log.info("new filter")
             self.filters_updated[current_channel] = True
             self.valueList_filter[current_channel, self.select_slice(identifier)] = args
-            self.log.info("Current Filter List: {}".format(str(self.valueList_filter[current_channel,:])))
         #else:
         #    self.log.info("same filter as before")
+
+        self.log.info("Channel: {}".format(str(channel)))
+        self.log.info("Current Filter List: {}".format(str(self.valueList_filter[current_channel, :])))
 
     def handle_late_reverb_input(self, identifier, channel, *args):
         """
@@ -131,8 +133,6 @@ class OscReceiver(object):
         """
 
         #assert identifier == "/pyBinSimLateReverbFilter"
-
-        self.log.info("Channel: {}".format(str(channel)))
         #self.log.info("Args: {}".format(str(args)))
 
         current_channel = channel
@@ -141,9 +141,11 @@ class OscReceiver(object):
             #self.log.info("new late reverb filter")
             self.late_reverb_filters_updated[current_channel] = True
             self.valueList_late_reverb[current_channel, self.select_slice(identifier)] = args
-            self.log.info("Current Late Reverb Filter List: {}".format(str(self.valueList_late_reverb[current_channel,:])))
         #else:
         #    self.log.info("same late reverb filter as before")
+
+        self.log.info("Channel: {}".format(str(channel)))
+        self.log.info("Current Late Reverb Filter List: {}".format(str(self.valueList_late_reverb[current_channel, :])))
 
     def handle_file_input(self, identifier, soundpath):
         """ Handler for playlist control"""
