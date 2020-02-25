@@ -61,10 +61,12 @@ class OscReceiver(object):
 
         osc_dispatcher = dispatcher.Dispatcher()
         osc_dispatcher.map("/pyBinSimFilter", self.handle_filter_input)
+        osc_dispatcher.map("/pyBinSimFilterShort", self.handle_filter_input)
         osc_dispatcher.map("/pyBinSimFilterOrientation", self.handle_filter_input)
         osc_dispatcher.map("/pyBinSimFilterPosition", self.handle_filter_input)
         osc_dispatcher.map("/pyBinSimFilterCustom", self.handle_filter_input)
         osc_dispatcher.map("/pyBinSimLateReverbFilter", self.handle_late_reverb_input)
+        osc_dispatcher.map("/pyBinSimLateReverbFilterShort", self.handle_late_reverb_input)
         osc_dispatcher.map("/pyBinSimLateReverbFilterOrientation", self.handle_late_reverb_input)
         osc_dispatcher.map("/pyBinSimLateReverbFilterPosition", self.handle_late_reverb_input)
         osc_dispatcher.map("/pyBinSimLateReverbFilterCustom", self.handle_late_reverb_input)
@@ -79,10 +81,12 @@ class OscReceiver(object):
     def select_slice(self, i):
         switcher = {
             "/pyBinSimFilter": slice(0, 9),
+            "/pyBinSimFilterShort": slice(0, 6), # To support older filter lists
             "/pyBinSimFilterOrientation": slice(0, 3),
             "/pyBinSimFilterPosition": slice(3, 6),
             "/pyBinSimFilterCustom": slice(6, 9),
             "/pyBinSimLateReverbFilter": slice(0, 9),
+            "/pyBinSimLateReverbFilterShort": slice(0, 6),  # To support older filter lists
             "/pyBinSimLateReverbFilterOrientation": slice(0, 3),
             "/pyBinSimLateReverbFilterPosition": slice(3, 6),
             "/pyBinSimLateReverbFilterCustom": slice(6, 9)
@@ -98,27 +102,17 @@ class OscReceiver(object):
         :param args:
         :return:
         """
-
-        #assert identifier == ("/pyBinSimFilter", "/pyBinSimFilterOrientation", "/pyBinSimFilterPosition","/pyBinSimFilterCustom")
-        # assert all(isinstance(x, int) for x in args) == True
-
-        # Extend value list to support older scripts
-        # if (len(args)<6):
-        #    args=(args+(0,)*6)[:6]
-        #    print("filter value list incomplete")
-
-
-        #self.log.info("Args: {}".format(str(args)))
-
         current_channel = channel
+        key_slice = self.select_slice(identifier)
 
-        if (args != self.valueList_filter[current_channel, self.select_slice(identifier)]).any():
+        if len(args) == len(self.valueList_filter[current_channel, key_slice]):
             self.filters_updated[current_channel] = True
-            self.valueList_filter[current_channel, self.select_slice(identifier)] = args
-        #else:
-        #    self.log.info("same filter as before")
+            self.valueList_filter[current_channel, key_slice] = args
+        elif args == self.valueList_filter[current_channel, key_slice]:
+            self.log.debug("Same filter as before")
+        else:
+            self.log.info('OSC identifier and key mismatch')
 
-        self.log.debug("Filter new?: " + str(self.filters_updated[current_channel]))
         self.log.info("Channel: {}".format(str(channel)))
         self.log.info("Current Filter List: {}".format(str(self.valueList_filter[current_channel, :])))
 
@@ -131,19 +125,17 @@ class OscReceiver(object):
         :param args:
         :return:
         """
-
-        #assert identifier == "/pyBinSimLateReverbFilter"
-        #self.log.info("Args: {}".format(str(args)))
-
         current_channel = channel
+        key_slice = self.select_slice(identifier)
 
-        if (args != self.valueList_late_reverb[current_channel,self.select_slice(identifier)]).any():
+        if len(args) == len(self.valueList_late_reverb[current_channel, key_slice]):
             self.late_reverb_filters_updated[current_channel] = True
-            self.valueList_late_reverb[current_channel, self.select_slice(identifier)] = args
-        #else:
-        #    self.log.info("same late reverb filter as before")
+            self.valueList_late_reverb[current_channel, key_slice] = args
+        elif args == self.valueList_late_reverb[current_channel, key_slice]:
+            self.log.debug("Same late reverb filter as before")
+        else:
+            self.log.info('OSC identifier and key mismatch')
 
-        self.log.debug("Filter new?: " + str(self.late_reverb_filters_updated[current_channel]))
         self.log.info("Channel: {}".format(str(channel)))
         self.log.info("Current Late Reverb Filter List: {}".format(str(self.valueList_late_reverb[current_channel, :])))
 
