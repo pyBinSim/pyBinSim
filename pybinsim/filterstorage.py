@@ -28,6 +28,7 @@ import numpy as np
 import soundfile as sf
 
 import pyfftw
+import time
 
 from pybinsim.pose import Pose
 from pybinsim.utility import total_size
@@ -75,9 +76,9 @@ class Filter(object):
     def storeInFDomain(self,fftw_plan):
         self.TF_left_blocked = np.zeros((self.ir_blocks, self.block_size + 1), dtype='complex64')
         self.TF_right_blocked = np.zeros((self.ir_blocks, self.block_size + 1), dtype='complex64')
-        for ir_block_count in range(self.ir_blocks):
-            self.TF_left_blocked[ir_block_count, :] = fftw_plan(self.IR_left_blocked[ir_block_count, :])
-            self.TF_right_blocked[ir_block_count, :] = fftw_plan(self.IR_right_blocked[ir_block_count, :])
+
+        self.TF_left_blocked [:] = fftw_plan(self.IR_left_blocked)
+        self.TF_right_blocked [:] = fftw_plan(self.IR_right_blocked)
 
         self.fd_available = True
 
@@ -117,9 +118,7 @@ class FilterStorage(object):
         self.ir_blocks = irSize // block_size
         self.block_size = block_size
 
-        self.filter_fftw_plan = pyfftw.builders.rfft(np.zeros(self.block_size),n=self.block_size * 2, overwrite_input=True,
-                                                     threads=nThreads, planner_effort=fftw_planning_effort,
-                                                     avoid_copy=False)
+        self.filter_fftw_plan = pyfftw.builders.rfft(np.zeros((self.ir_blocks,self.block_size), dtype='float32'),n=self.block_size*2,axis = 1, threads=nThreads, planner_effort=fftw_planning_effort)
 
         self.default_filter = Filter(np.zeros((self.ir_size, 2), dtype='float32'),self.ir_blocks,self.block_size)
         self.default_filter.storeInFDomain(self.filter_fftw_plan)
@@ -134,12 +133,23 @@ class FilterStorage(object):
             self.headPhoneFilterSize = headphoneFilterSize
             self.headphone_ir_blocks = headphoneFilterSize // block_size
 
+            self.hp_filter_fftw_plan = pyfftw.builders.rfft(np.zeros((self.headphone_ir_blocks, self.block_size), dtype='float32'),
+                                                          n=self.block_size * 2, axis=1, overwrite_input=False,
+                                                          threads=nThreads, planner_effort=fftw_planning_effort,
+                                                          avoid_copy=False)
+
         self.useSplittedFilters = useSplittedFilters
         if useSplittedFilters:
             self.lateReverbSize = lateReverbSize
             self.late_ir_blocks = lateReverbSize // block_size
+
+            self.late_filter_fftw_plan = pyfftw.builders.rfft(np.zeros((self.late_ir_blocks, self.block_size), dtype='float32'),
+                                                         n=self.block_size * 2, axis=1, overwrite_input=False,
+                                                         threads=nThreads, planner_effort=fftw_planning_effort,
+                                                         avoid_copy=False)
+
             self.default_late_reverb_filter = Filter(np.zeros((self.lateReverbSize, 2), dtype='float32'), self.late_ir_blocks, self.block_size)
-            self.default_late_reverb_filter.storeInFDomain(self.filter_fftw_plan)
+            self.default_late_reverb_filter.storeInFDomain(self.late_filter_fftw_plan)
 
         self.filter_list_path = filter_list_name
         self.filter_list = open(self.filter_list_path, 'r')
@@ -181,7 +191,7 @@ class FilterStorage(object):
             if line.startswith('HPFILTER') and self.useHeadphoneFilter:
                 self.log.info("Loading headphone filter: {}".format(filter_path))
                 self.headphone_filter = Filter(self.load_filter(filter_path), self.headphone_ir_blocks, self.block_size)
-                self.headphone_filter.storeInFDomain(self.filter_fftw_plan)
+                self.headphone_filter.storeInFDomain(self.hp_filter_fftw_plan)
 
                 continue
             elif line.startswith('HPFILTER') :
@@ -215,6 +225,8 @@ class FilterStorage(object):
         """
 
         self.log.info("Start loading filters...")
+        start = time.time()
+
 
         for i, (filter_pose, filter_path, filter_type) in enumerate(self.parse_filter_list()):
 
@@ -244,13 +256,14 @@ class FilterStorage(object):
                 current_filter.apply_fadein(self.crossFadeIn)
 
                 # testing
-                current_filter.storeInFDomain(self.filter_fftw_plan)
+                current_filter.storeInFDomain(self.late_filter_fftw_plan)
 
                 # create key and store in dict.
                 key = filter_pose.create_key()
                 self.late_reverb_filter_dict.update({key: current_filter})
 
-        self.log.info("Finished loading filters.")
+        end = time.time()
+        self.log.info("Finished loading filters in: " + str(end-start) +"s")
         #self.log.info("filter_dict size: {}MiB".format(total_size(self.filter_dict) // 1024 // 1024))
 
 
