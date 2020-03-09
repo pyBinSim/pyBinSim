@@ -246,6 +246,9 @@ def audio_callback(binsim):
             # Update Filters and run each convolver with the current block
             for n in range(binsim.soundHandler.get_sound_channels()):
 
+                # save old filters before updating (for interpolation)
+                binsim.convolvers[n].saveOldFilters()
+
                 # Get new Filter
                 if binsim.oscReceiver.is_filter_update_necessary(n):
                     filterValueList = binsim.oscReceiver.get_current_filter_values(n)

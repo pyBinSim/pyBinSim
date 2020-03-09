@@ -106,12 +106,14 @@ class OscReceiver(object):
         key_slice = self.select_slice(identifier)
 
         if len(args) == len(self.valueList_filter[current_channel, key_slice]):
-            self.filters_updated[current_channel] = True
-            self.valueList_filter[current_channel, key_slice] = args
-        elif args == self.valueList_filter[current_channel, key_slice]:
-            self.log.debug("Same filter as before")
+            if all(args == self.valueList_filter[current_channel, key_slice]):
+                self.log.info("Same filter as before")
+            else:
+                self.filters_updated[current_channel] = True
+                self.valueList_filter[current_channel, key_slice] = args
         else:
             self.log.info('OSC identifier and key mismatch')
+
 
         self.log.info("Channel: {}".format(str(channel)))
         self.log.info("Current Filter List: {}".format(str(self.valueList_filter[current_channel, :])))
@@ -129,10 +131,11 @@ class OscReceiver(object):
         key_slice = self.select_slice(identifier)
 
         if len(args) == len(self.valueList_late_reverb[current_channel, key_slice]):
-            self.late_reverb_filters_updated[current_channel] = True
-            self.valueList_late_reverb[current_channel, key_slice] = args
-        elif args == self.valueList_late_reverb[current_channel, key_slice]:
-            self.log.debug("Same late reverb filter as before")
+            if all(args == self.valueList_late_reverb[current_channel, key_slice]):
+                self.log.info("Same late reverb filter as before")
+            else:
+                self.late_reverb_filters_updated[current_channel] = True
+                self.valueList_late_reverb[current_channel, key_slice] = args
         else:
             self.log.info('OSC identifier and key mismatch')
 

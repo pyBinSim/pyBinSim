@@ -144,9 +144,9 @@ class ConvolverFFTW(object):
         """
         return self.processCounter
 
-    def combineFilters(self):
+    def buildFilters(self):
         """
-        Transform filter to freq domain
+        Build filter from early and late part
 
         :param filter:
         :return: transformed filter
@@ -171,15 +171,9 @@ class ConvolverFFTW(object):
         :param do_interpolation:
         :return: None
         """
-        self.saveOldFilters()
-
         left, right = filter.getFilterFD()
         self.TF_left_blocked[0:self.late_early_transition, :] = left
         self.TF_right_blocked[0:self.late_early_transition, :] = right
-
-
-        # apply new filters
-        self.combineFilters()
 
         # Interpolation means cross fading the output blocks (linear interpolation)
         self.interpolate = do_interpolation
@@ -191,14 +185,9 @@ class ConvolverFFTW(object):
         :param filter:
         :return: None
         """
-        self.saveOldFilters()
-
         left, right = filter.getFilterFD()
         self.TF_late_left_blocked[0:self.late_IR_blocks, :] = left
         self.TF_late_right_blocked[0:self.late_IR_blocks, :] = right
-
-        # apply new filters
-        self.combineFilters()
 
         # Interpolation means cross fading the output blocks (linear interpolation)
         self.interpolate = do_interpolation
@@ -294,19 +283,17 @@ class ConvolverFFTW(object):
             # print('Convolver Stereo Processing')
             self.fill_buffer_stereo(block)
 
-        # Second: Multiplikation with IR block und accumulation with previous data
+        # Rebuild filter
+        self.buildFilters()
+
+        # Second: Multiplication with IR block und accumulation with previous data
         self.resultLeftFreq[:] = np.sum(np.multiply(self.TF_left_blocked,self.FDL_left), axis=0)
         self.resultRightFreq[:] = np.sum(np.multiply(self.TF_right_blocked,self.FDL_right), axis=0)
 
         # Also convolute old filter if interpolation needed and do crossfade
         if self.interpolate:
-
             self.resultLeftFreqPrevious[:] = np.sum(np.multiply(self.TF_left_blocked_previous, self.FDL_left), axis=0)
             self.resultRightFreqPrevious[:] = np.sum(np.multiply(self.TF_right_blocked_previous, self.FDL_right), axis=0)
-
-            # # freq domain crossfade
-            # self.resultLeftFreq[:] = np.add(np.multiply(self.resultLeftFreqPrevious, self.crossFadeOut), np.multiply(self.resultLeftFreq, self.crossFadeIn))
-            # self.resultRightFreq[:] = np.add(np.multiply(self.resultRightFreqPrevious, self.crossFadeOut), np.multiply(self.resultRightFreq, self.crossFadeIn))
 
         # Third: Transformation back to time domain
         self.outputLeft = self.resultLeftIFFTPlan()[self.block_size:self.block_size * 2]
