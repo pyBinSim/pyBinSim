@@ -132,6 +132,9 @@ class ConvolverFFTW(object):
         # Flag for interpolation of output blocks (result of process())
         self.interpolate = False
 
+        # Flag which initiates filter rebuild (combining early and late part)
+        self.buildNewFilter = False
+
         # Select mono or stereo processing
         self.processStereo = process_stereo
 
@@ -153,7 +156,7 @@ class ConvolverFFTW(object):
         """
 
         # Attach late part; Filter will be shorter by one block afterwards
-        if self.useSplittedFilters:
+        if self.useSplittedFilters and self.buildNewFilter:
             # Overlap last block of early filters with first block of late reverb
             self.TF_left_blocked[self.late_early_transition-1, :] = np.add(self.TF_left_blocked[self.late_early_transition-1, :], self.TF_late_left_blocked[0, :])
             self.TF_right_blocked[self.late_early_transition-1, :] = np.add(self.TF_right_blocked[self.late_early_transition-1, :], self.TF_late_right_blocked[0, :])
@@ -161,6 +164,8 @@ class ConvolverFFTW(object):
             # Add all other late filter blocks
             self.TF_left_blocked[self.late_early_transition:-1, :] = self.TF_late_left_blocked[1:, :]
             self.TF_right_blocked[self.late_early_transition:-1, :] = self.TF_late_right_blocked[1:, :]
+
+            self.buildNewFilter = False
 
     def setIR(self, filter, do_interpolation):
         """
@@ -178,6 +183,8 @@ class ConvolverFFTW(object):
         # Interpolation means cross fading the output blocks (linear interpolation)
         self.interpolate = do_interpolation
 
+        self.buildNewFilter = True
+
     def setLateReverb(self, filter, do_interpolation):
         """
         Hand over latereverb filter to the convolver
@@ -191,6 +198,8 @@ class ConvolverFFTW(object):
 
         # Interpolation means cross fading the output blocks (linear interpolation)
         self.interpolate = do_interpolation
+
+        self.buildNewFilter = True
 
     def saveOldFilters(self):
 
