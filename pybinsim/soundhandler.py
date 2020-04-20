@@ -39,7 +39,7 @@ class SoundHandler(object):
         self.n_channels = n_channels
         self.chunk_size = block_size
         self.bufferSize = block_size * 2
-        self.buffer = np.zeros([self.n_channels, self.bufferSize])
+        self.buffer = np.zeros([self.n_channels, self.bufferSize], dtype=np.float32)
         self.sound = np.empty((0, 0))
         self.sound_file = np.empty((0, 0))
         self.frame_count = 0
@@ -55,7 +55,8 @@ class SoundHandler(object):
 
     def buffer_add_silence(self):
         self.buffer[:self.active_channels, :-self.chunk_size] = self.buffer[:self.active_channels, self.chunk_size:]
-        self.buffer[:self.active_channels, -self.chunk_size:] = np.zeros([self.active_channels, self.chunk_size])
+        self.buffer[:self.active_channels, -self.chunk_size:] = np.zeros([self.active_channels, self.chunk_size],
+                                                                         dtype=np.float32)
 
     def buffer_add_sound(self):
         if (self.frame_count + 1) * self.chunk_size < self.sound.shape[1]:
@@ -76,7 +77,7 @@ class SoundHandler(object):
             self.buffer_add_silence()
 
     def buffer_flush(self):
-        self.buffer = np.zeros([self.n_channels, self.bufferSize])
+        self.buffer = np.zeros([self.n_channels, self.bufferSize], dtype=np.float32)
 
     def buffer_read(self):
         if self.new_sound_file_loaded:
