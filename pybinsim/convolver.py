@@ -185,7 +185,7 @@ class ConvolverFFTW(object):
 
         if block.size < self.block_size:
             # print('Fill up last block')
-            block = np.concatenate((block, np.zeros((1, (self.block_size - block.size)))), 1)
+            block = np.concatenate((block, np.zeros((1, (self.block_size - block.size)), dtype=np.float32)), 1)
 
         if self.processCounter == 0:
             # insert first block to buffer
@@ -216,7 +216,7 @@ class ConvolverFFTW(object):
         if block.size < self.block_size:
             # print('Fill up last block')
             # print(np.shape(block))
-            block = np.concatenate((block, np.zeros(((self.block_size - block.size), 2))), 0)
+            block = np.concatenate((block, np.zeros(((self.block_size - block.size), 2), dtype=np.float32)), 0)
 
         if self.processCounter == 0:
             # insert first block to buffer
