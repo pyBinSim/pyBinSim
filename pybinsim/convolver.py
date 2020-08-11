@@ -22,6 +22,9 @@
 
 import logging
 import multiprocessing
+import pickle
+from pathlib import Path
+from timeit import default_timer
 
 import numpy as np
 import pyfftw
@@ -37,6 +40,7 @@ class ConvolverFFTW(object):
     """
 
     def __init__(self, ir_size, block_size, process_stereo):
+        start = default_timer()
 
         self.log = logging.getLogger("pybinsim.ConvolverFFTW")
         self.log.info("Convolver: Start Init")
@@ -45,6 +49,7 @@ class ConvolverFFTW(object):
         pyfftw.interfaces.cache.enable()
         #self.fftw_planning_effort='FFTW_MEASURE'
         self.fftw_planning_effort ='FFTW_PATIENT'
+        # self.fftw_planning_effort ='FFTW_EXHAUSTIVE' # takes 5..10 minutes
 
         # Get Basic infos
         self.IR_size = ir_size
@@ -65,8 +70,15 @@ class ConvolverFFTW(object):
 
         # Filter format: [nBlocks,blockSize*2]
 
+        pn_temporary = Path(__file__).parent.parent / "tmp"
+        fn_wisdom = pn_temporary / "fftw_wisdom.pickle"
+        if pn_temporary.exists() and fn_wisdom.exists():
+            loaded_wisdom = pickle.load(open(fn_wisdom,'rb'))
+            pyfftw.import_wisdom(loaded_wisdom)
+
         # Create Input Buffers and create fftw plans. These need to be memory aligned, because they are ransformed to
         # freq domain regularly
+        self.log.info("Convolver: Start Init buffer fft plans")
         self.buffer = pyfftw.zeros_aligned(self.block_size * 2, dtype='float32')
         self.bufferFftPlan = pyfftw.builders.rfft(self.buffer, overwrite_input=True, threads=nThreads,
                                                      planner_effort=self.fftw_planning_effort,avoid_copy=True)
@@ -76,12 +88,13 @@ class ConvolverFFTW(object):
                                                      planner_effort=self.fftw_planning_effort,avoid_copy=True)
 
         # Create arrays for the filters and the FDLs.
+        self.log.info("Convolver: Start Init filter fft plans")
         self.TF_left_blocked = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
         self.TF_right_blocked = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
         self.TF_left_blocked_previous = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
         self.TF_right_blocked_previous = np.zeros((self.IR_blocks, self.block_size + 1), dtype='complex64')
 
-        self.filter_fftw_plan = pyfftw.builders.rfft(np.zeros(self.block_size),n=self.block_size * 2, overwrite_input=True,
+        self.filter_fftw_plan = pyfftw.builders.rfft(np.zeros(self.block_size, dtype=np.float32),n=self.block_size * 2, overwrite_input=True,
                                                      threads=nThreads, planner_effort=self.fftw_planning_effort,
                                                      avoid_copy=False)
 
@@ -95,18 +108,28 @@ class ConvolverFFTW(object):
         self.resultRightFreq = pyfftw.zeros_aligned(self.block_size + 1, dtype='complex64')
         self.resultLeftFreqPrevious = pyfftw.zeros_aligned(self.block_size + 1, dtype='complex64')
         self.resultRightFreqPrevious = pyfftw.zeros_aligned(self.block_size + 1, dtype='complex64')
+
+        self.log.info("Convolver: Start Init result ifft plans")
         self.resultLeftIFFTPlan = pyfftw.builders.irfft(self.resultLeftFreq,
                                                         overwrite_input=True, threads=nThreads,
                                                         planner_effort=self.fftw_planning_effort,avoid_copy=True)
         self.resultRightIFFTPlan = pyfftw.builders.irfft(self.resultRightFreq,
                                                          overwrite_input=True, threads=nThreads,
                                                          planner_effort=self.fftw_planning_effort,avoid_copy=True)
+        
+        self.log.info("Convolver: Start Init result prvieous fft plans")
         self.resultLeftPreviousIFFTPlan = pyfftw.builders.irfft(self.resultLeftFreqPrevious ,
                                                                 overwrite_input=True, threads=nThreads,
                                                                 planner_effort=self.fftw_planning_effort,avoid_copy=True)
         self.resultRightPreviousIFFTPlan = pyfftw.builders.irfft(self.resultRightFreqPrevious,
                                                                  overwrite_input=True, threads=nThreads,
                                                                  planner_effort=self.fftw_planning_effort,avoid_copy=True)
+
+        # save FFTW plans to recover for next pyBinSim session
+        collected_wisdom = pyfftw.export_wisdom()
+        if not pn_temporary.exists():
+            pn_temporary.mkdir(parents=True)
+        pickle.dump(collected_wisdom, open(fn_wisdom, "wb"))
 
         # Result of the ifft is stored here
         self.outputLeft = np.zeros(self.block_size, dtype='float32')
@@ -121,7 +144,9 @@ class ConvolverFFTW(object):
         # Select mono or stereo processing
         self.processStereo = process_stereo
 
-        self.log.info("Convolver: Finished Init")
+        end = default_timer()
+        delta = end - start
+        self.log.info(f"Convolver: Finished Init (took {delta}s)")
 
     def get_counter(self):
         """

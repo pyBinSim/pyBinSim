@@ -5,7 +5,7 @@
 
 # cache files
 **/__pycache__
-pybinsim/fftw_wisdom.pickle
+tmp/
 
 # virtual env
 venv/
