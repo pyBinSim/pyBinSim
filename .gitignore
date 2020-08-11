@@ -1,0 +1,14 @@
+# IDEs
+**/.idea
+.vscode/
+*.code-workspace
+
+# cache files
+**/__pycache__
+pybinsim/fftw_wisdom.pickle
+
+# virtual env
+venv/
+
+# folder holding BRIR wave files
+brirs/
