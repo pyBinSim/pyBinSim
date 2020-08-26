@@ -5,6 +5,7 @@
 
 # cache files
 **/__pycache__
+pybinsim.egg-info/
 tmp/
 
 # virtual env
