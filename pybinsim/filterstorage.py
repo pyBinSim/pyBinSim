@@ -84,7 +84,7 @@ class FilterStorage(object):
         for line in self.filter_list:
 
             # comment out lines in the list with a '#'
-            if line.startswith('#'):
+            if line.startswith('#') or line == "\n":
                 continue
 
             line_content = line.split()
