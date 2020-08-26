@@ -33,10 +33,11 @@ nThreads = multiprocessing.cpu_count()
 
 class Filter(object):
 
-    def __init__(self, inputfilter, irBlocks, block_size):
+    def __init__(self, inputfilter, irBlocks, block_size, filename=None):
 
         self.IR_left_blocked = np.reshape(inputfilter[:, 0], (irBlocks, block_size))
         self.IR_right_blocked = np.reshape(inputfilter[:, 1], (irBlocks, block_size))
+        self.filename = filename
 
     def getFilter(self):
         return self.IR_left_blocked, self.IR_right_blocked
@@ -112,7 +113,8 @@ class FilterStorage(object):
         for i, (pose, filter_path) in enumerate(self.parse_filter_list()):
             self.log.debug('Loading {}'.format(filter_path))
 
-            current_filter = Filter(self.load_filter(filter_path), self.ir_blocks, self.block_size)
+            loaded_filter = self.load_filter(filter_path)
+            current_filter = Filter(loaded_filter, self.ir_blocks, self.block_size, filename=filter_path)
 
             # create key and store in dict.
             key = pose.create_key()
@@ -133,8 +135,11 @@ class FilterStorage(object):
         key = pose.create_key()
 
         if key in self.filter_dict:
-            self.log.info('Filter found: key: {}'.format(key))
-            return self.filter_dict.get(key)
+            self.log.info(f'Filter found: key: {key}')
+            result_filter = self.filter_dict.get(key)
+            if result_filter.filename is not None:
+                self.log.info(f'   use file:: {result_filter.filename}')
+            return result_filter
         else:
             self.log.warning('Filter not found: key: {}'.format(key))
             return self.default_filter
