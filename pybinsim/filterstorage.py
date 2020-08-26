@@ -162,7 +162,10 @@ class FilterStorage(object):
 
         # Fill filter with zeros if to short
         if filter_size[0] < self.ir_size:
-            self.log.warning('Filter to short: Fill up with zeros')
+            self.log.warning('Filter too short: Fill up with zeros')
             current_filter = np.concatenate((current_filter, np.zeros((self.ir_size - filter_size[0], 2), np.float32)), 0)
+        if filter_size[0] > self.ir_size:
+            self.log.warning('Filter too long: shorten')
+            current_filter = current_filter[:self.ir_size]
 
         return current_filter
