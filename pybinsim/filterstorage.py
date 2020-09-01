@@ -31,12 +31,15 @@ from pybinsim.utility import total_size
 
 nThreads = multiprocessing.cpu_count()
 
+
 class Filter(object):
 
     def __init__(self, inputfilter, irBlocks, block_size, filename=None):
 
-        self.IR_left_blocked = np.reshape(inputfilter[:, 0], (irBlocks, block_size))
-        self.IR_right_blocked = np.reshape(inputfilter[:, 1], (irBlocks, block_size))
+        self.IR_left_blocked = np.reshape(
+            inputfilter[:, 0], (irBlocks, block_size))
+        self.IR_right_blocked = np.reshape(
+            inputfilter[:, 1], (irBlocks, block_size))
         self.filename = filename
 
     def getFilter(self):
@@ -54,7 +57,8 @@ class FilterStorage(object):
         self.ir_size = irSize
         self.ir_blocks = irSize // block_size
         self.block_size = block_size
-        self.default_filter = Filter(np.zeros((self.ir_size, 2), dtype='float32'),self.ir_blocks,self.block_size)
+        self.default_filter = Filter(
+            np.zeros((self.ir_size, 2), dtype='float32'), self.ir_blocks, self.block_size)
 
         self.filter_list_path = filter_list_name
         self.filter_list = open(self.filter_list_path, 'r')
@@ -91,8 +95,10 @@ class FilterStorage(object):
             filter_path = line_content[-1]
 
             if line.startswith('HPFILTER'):
-                self.log.info("Loading headphone filter: {}".format(filter_path))
-                self.headphone_filter = Filter(self.load_filter(filter_path),self.ir_blocks,self.block_size)
+                self.log.info(
+                    "Loading headphone filter: {}".format(filter_path))
+                self.headphone_filter = Filter(self.load_filter(
+                    filter_path), self.ir_blocks, self.block_size)
                 continue
 
             filter_value_list = tuple(line_content[0:-1])
@@ -114,7 +120,8 @@ class FilterStorage(object):
             self.log.debug('Loading {}'.format(filter_path))
 
             loaded_filter = self.load_filter(filter_path)
-            current_filter = Filter(loaded_filter, self.ir_blocks, self.block_size, filename=filter_path)
+            current_filter = Filter(
+                loaded_filter, self.ir_blocks, self.block_size, filename=filter_path)
 
             # create key and store in dict.
             key = pose.create_key()
@@ -163,7 +170,8 @@ class FilterStorage(object):
         # Fill filter with zeros if to short
         if filter_size[0] < self.ir_size:
             self.log.warning('Filter too short: Fill up with zeros')
-            current_filter = np.concatenate((current_filter, np.zeros((self.ir_size - filter_size[0], 2), np.float32)), 0)
+            current_filter = np.concatenate((current_filter, np.zeros(
+                (self.ir_size - filter_size[0], 2), np.float32)), 0)
         if filter_size[0] > self.ir_size:
             self.log.warning('Filter too long: shorten')
             current_filter = current_filter[:self.ir_size]

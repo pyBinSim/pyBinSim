@@ -9,7 +9,8 @@ def init_logging(loglevel):
     console_handler = logging.StreamHandler()
     console_handler.setLevel(loglevel)
 
-    formatter = logging.Formatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        '%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(message)s')
     console_handler.setFormatter(formatter)
 
     logger = logging.getLogger("pybinsim")

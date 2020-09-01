@@ -39,7 +39,8 @@ def get_intact_reading(sensor_reading, prefix='!ANG:'):
     :return: CSV string without prefix. None if parsing failed.
     """
     digit_regex = r"(([-]?\d*\.\d+)|[-]?\d+)?"
-    reading_regex = r"{}{},{},{}".format(prefix, digit_regex, digit_regex, digit_regex)
+    reading_regex = r"{}{},{},{}".format(
+        prefix, digit_regex, digit_regex, digit_regex)
 
     for item in reversed(sensor_reading):
         item = item.strip()

@@ -129,7 +129,6 @@ def printoptions(*args, **kwargs):
         np.set_printoptions(**original)
 
 
-
 # taken from https://code.activestate.com/recipes/577504/ as recommended by
 # https://docs.python.org/3.5/library/sys.html#sys.getsizeof
 def total_size(o, handlers={}, verbose=False):
@@ -143,17 +142,18 @@ def total_size(o, handlers={}, verbose=False):
                     OtherContainerClass: OtherContainerClass.get_elements}
 
     """
-    dict_handler = lambda d: chain.from_iterable(d.items())
+    def dict_handler(d): return chain.from_iterable(d.items())
     all_handlers = {tuple: iter,
                     list: iter,
                     deque: iter,
                     dict: dict_handler,
                     set: iter,
                     frozenset: iter,
-                   }
+                    }
     all_handlers.update(handlers)     # user handlers take precedence
     seen = set()                      # track which object id's have already been seen
-    default_size = getsizeof(0)       # estimate sizeof object without __sizeof__
+    # estimate sizeof object without __sizeof__
+    default_size = getsizeof(0)
 
     def sizeof(o):
         if id(o) in seen:       # do not double count the same object

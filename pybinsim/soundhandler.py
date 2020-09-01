@@ -39,7 +39,8 @@ class SoundHandler(object):
         self.n_channels = n_channels
         self.chunk_size = block_size
         self.bufferSize = block_size * 2
-        self.buffer = np.zeros([self.n_channels, self.bufferSize], dtype=np.float32)
+        self.buffer = np.zeros(
+            [self.n_channels, self.bufferSize], dtype=np.float32)
         self.sound = np.empty((0, 0))
         self.sound_file = np.empty((0, 0))
         self.frame_count = 0
@@ -54,18 +55,20 @@ class SoundHandler(object):
         self._run_file_reader()
 
     def buffer_add_silence(self):
-        self.buffer[:self.active_channels, :-self.chunk_size] = self.buffer[:self.active_channels, self.chunk_size:]
+        self.buffer[:self.active_channels, :-
+                    self.chunk_size] = self.buffer[:self.active_channels, self.chunk_size:]
         self.buffer[:self.active_channels, -self.chunk_size:] = np.zeros([self.active_channels, self.chunk_size],
                                                                          dtype=np.float32)
 
     def buffer_add_sound(self):
         if (self.frame_count + 1) * self.chunk_size < self.sound.shape[1]:
-            self.buffer[:self.active_channels, :-self.chunk_size] = self.buffer[:self.active_channels, self.chunk_size:]
+            self.buffer[:self.active_channels, :-
+                        self.chunk_size] = self.buffer[:self.active_channels, self.chunk_size:]
             self.buffer[:self.active_channels, -self.chunk_size:] = self.sound[
-                                                                    :self.active_channels,
-                                                                    self.frame_count * self.chunk_size: (
-                                                                                                        self.frame_count + 1) * self.chunk_size
-                                                                    ]
+                :self.active_channels,
+                self.frame_count * self.chunk_size: (
+                    self.frame_count + 1) * self.chunk_size
+            ]
             self.frame_count += 1
         elif self.currentSoundFile < len(self.soundFileList) and not self.new_sound_file_request:
             self.request_next_sound_file()
@@ -77,7 +80,8 @@ class SoundHandler(object):
             self.buffer_add_silence()
 
     def buffer_flush(self):
-        self.buffer = np.zeros([self.n_channels, self.bufferSize], dtype=np.float32)
+        self.buffer = np.zeros(
+            [self.n_channels, self.bufferSize], dtype=np.float32)
 
     def buffer_read(self):
         if self.new_sound_file_loaded:
@@ -102,7 +106,8 @@ class SoundHandler(object):
                 audio_file_data, fs = sf.read(self.soundPath, dtype='float32', )
                 assert fs == self.fs
 
-                self.log.debug("audio_file_data: {} MB".format(audio_file_data.nbytes // 1024 // 1024))
+                self.log.debug("audio_file_data: {} MB".format(
+                    audio_file_data.nbytes // 1024 // 1024))
                 self.sound_file = np.asmatrix(audio_file_data)
 
                 # free data
@@ -114,18 +119,24 @@ class SoundHandler(object):
                 self.active_channels = self.sound_file.shape[0]
 
                 if self.sound_file.shape[1] % self.chunk_size != 0:
-                    length_diff = self.chunk_size - (self.sound_file.shape[1] % self.chunk_size)
-                    zeros = np.zeros((self.sound_file.shape[0], length_diff), dtype=np.float32)
+                    length_diff = self.chunk_size - \
+                        (self.sound_file.shape[1] % self.chunk_size)
+                    zeros = np.zeros(
+                        (self.sound_file.shape[0], length_diff), dtype=np.float32)
 
                     self.log.debug("Zeros size: {} Byte".format(zeros.nbytes))
-                    self.log.debug("Zeros shape: {} ({})".format(zeros.shape, zeros.dtype))
-                    self.log.debug("Soundfile size: {} MiB".format(self.sound_file.nbytes // 1024 // 1024))
-                    self.log.debug("Soundfile shape: {} ({})".format(self.sound_file.shape, self.sound_file.dtype))
+                    self.log.debug("Zeros shape: {} ({})".format(
+                        zeros.shape, zeros.dtype))
+                    self.log.debug("Soundfile size: {} MiB".format(
+                        self.sound_file.nbytes // 1024 // 1024))
+                    self.log.debug("Soundfile shape: {} ({})".format(
+                        self.sound_file.shape, self.sound_file.dtype))
                     self.sound_file = np.concatenate(
                         (self.sound_file, zeros),
                         1
                     )
-                    self.log.debug("Soundfile size after concat: {} MiB".format(self.sound_file.nbytes // 1024 // 1024))
+                    self.log.debug("Soundfile size after concat: {} MiB".format(
+                        self.sound_file.nbytes // 1024 // 1024))
                     self.log.debug(
                         "Soundfile shape after concat: {} ({})".format(self.sound_file.shape, self.sound_file.dtype))
                     self.log.info('Loaded new sound file\n')
