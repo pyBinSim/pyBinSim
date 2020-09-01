@@ -110,10 +110,9 @@ class BinSim(object):
         self.config = BinSimConfig()
         self.config.read_from_file(config_file)
 
-        self.current_config = self.config
-        self.nChannels = self.current_config.get('maxChannels')
-        self.sampleRate = self.current_config.get('samplingRate')
-        self.blockSize = self.current_config.get('blockSize')
+        self.nChannels = self.config.get('maxChannels')
+        self.sampleRate = self.config.get('samplingRate')
+        self.blockSize = self.config.get('blockSize')
 
         self.result = None
         self.block = None
@@ -143,11 +142,12 @@ class BinSim(object):
             time.sleep(1)
 
     def initialize_pybinsim(self):
-        self.result = np.empty([self.config.get('blockSize'), 2], np.dtype(np.float32))
-        self.block = np.empty([self.config.get('maxChannels'), self.config.get('blockSize')], np.dtype(np.float32))
+        self.result = np.empty([self.blockSize, 2], dtype=np.float32)
+        self.block = np.empty([self.nChannels, self.blockSize], dtype=np.float32)
 
         # Create FilterStorage
-        filterStorage = FilterStorage(self.config.get('filterSize'), self.config.get('blockSize'),
+        filterStorage = FilterStorage(self.config.get('filterSize'),
+                                      self.blockSize,
                                       self.config.get('filterList'))
 
         # Start an oscReceiver
@@ -156,22 +156,22 @@ class BinSim(object):
         time.sleep(1)
 
         # Create SoundHandler
-        soundHandler = SoundHandler(self.config.get('blockSize'), self.config.get('maxChannels'),
-                                    self.config.get('samplingRate'), self.config.get('loopSound'))
+        soundHandler = SoundHandler(self.blockSize, self.nChannels,
+                                    self.sampleRate, self.config.get('loopSound'))
 
         soundfile_list = self.config.get('soundfile')
         soundHandler.request_new_sound_file(soundfile_list)
 
         # Create N convolvers depending on the number of wav channels
-        self.log.info('Number of Channels: ' + str(self.config.get('maxChannels')))
-        convolvers = [None] * self.config.get('maxChannels')
-        for n in range(self.config.get('maxChannels')):
-            convolvers[n] = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), False)
+        self.log.info('Number of Channels: ' + str(self.nChannels))
+        convolvers = [None] * self.nChannels
+        for n in range(self.nChannels):
+            convolvers[n] = ConvolverFFTW(self.config.get('filterSize'), self.blockSize, False)
 
         # HP Equalization convolver
         convolverHP = None
         if self.config.get('useHeadphoneFilter'):
-            convolverHP = ConvolverFFTW(self.config.get('filterSize'), self.config.get('blockSize'), True)
+            convolverHP = ConvolverFFTW(self.config.get('filterSize'), self.blockSize, True)
             hpfilter = filterStorage.get_headphone_filter()
             convolverHP.setIR(hpfilter, False)
 
@@ -194,7 +194,7 @@ class BinSim(object):
 
         self.oscReceiver.close()
 
-        for n in range(self.config.get('maxChannels')):
+        for n in range(self.nChannels):
             self.convolvers[n].close()
 
         if self.config.get('useHeadphoneFilter'):
