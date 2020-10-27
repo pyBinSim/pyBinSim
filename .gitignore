@@ -9,7 +9,7 @@ pybinsim.egg-info/
 tmp/
 
 # virtual env
-venv/
+venv*/
 
 # folder holding BRIR wave files
 brirs/
