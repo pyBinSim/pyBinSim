@@ -47,8 +47,8 @@ class ConvolverFFTW(object):
 
         # pyFFTW Options
         pyfftw.interfaces.cache.enable()
-        self.fftw_planning_effort = 'FFTW_MEASURE'
-        # self.fftw_planning_effort = 'FFTW_PATIENT'
+        # self.fftw_planning_effort = 'FFTW_MEASURE'
+        self.fftw_planning_effort = 'FFTW_PATIENT'
         # self.fftw_planning_effort ='FFTW_EXHAUSTIVE' # takes 5..10 minutes
 
         # Get Basic infos
@@ -71,11 +71,11 @@ class ConvolverFFTW(object):
 
         # Filter format: [nBlocks,blockSize*2]
 
-        # pn_temporary = Path(__file__).parent.parent / "tmp"
-        # fn_wisdom = pn_temporary / "fftw_wisdom.pickle"
-        # if pn_temporary.exists() and fn_wisdom.exists():
-        #     loaded_wisdom = pickle.load(open(fn_wisdom, 'rb'))
-        #     pyfftw.import_wisdom(loaded_wisdom)
+        pn_temporary = Path(__file__).parent.parent / "tmp"
+        fn_wisdom = pn_temporary / "fftw_wisdom.pickle"
+        if pn_temporary.exists() and fn_wisdom.exists():
+            loaded_wisdom = pickle.load(open(fn_wisdom, 'rb'))
+            pyfftw.import_wisdom(loaded_wisdom)
 
         # Create Input Buffers and create fftw plans. These need to be memory aligned, because they are ransformed to
         # freq domain regularly
@@ -136,10 +136,10 @@ class ConvolverFFTW(object):
                                                                  planner_effort=self.fftw_planning_effort, avoid_copy=True)
 
         # save FFTW plans to recover for next pyBinSim session
-        # collected_wisdom = pyfftw.export_wisdom()
-        # if not pn_temporary.exists():
-        #     pn_temporary.mkdir(parents=True)
-        # pickle.dump(collected_wisdom, open(fn_wisdom, "wb"))
+        collected_wisdom = pyfftw.export_wisdom()
+        if not pn_temporary.exists():
+            pn_temporary.mkdir(parents=True)
+        pickle.dump(collected_wisdom, open(fn_wisdom, "wb"))
 
         # Result of the ifft is stored here
         self.outputLeft = np.zeros(self.block_size, dtype='float32')
