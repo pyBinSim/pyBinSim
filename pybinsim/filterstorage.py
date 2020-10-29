@@ -142,10 +142,10 @@ class FilterStorage(object):
         key = pose.create_key()
 
         if key in self.filter_dict:
-            self.log.info(f'Filter found: key: {key}')
+            self.log.info("Filter found: key: {}".format(key))
             result_filter = self.filter_dict.get(key)
             if result_filter.filename is not None:
-                self.log.info(f'   use file:: {result_filter.filename}')
+                self.log.info("   use file:: {}".format(result_filter.filename))
             return result_filter
         else:
             self.log.warning('Filter not found: key: {}'.format(key))

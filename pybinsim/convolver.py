@@ -156,7 +156,7 @@ class ConvolverFFTW(object):
 
         end = default_timer()
         delta = end - start
-        self.log.info(f"Convolver: Finished Init (took {delta}s)")
+        self.log.info("Convolver: Finished Init (took {}s)".format(delta))
 
     def get_counter(self):
         """
