@@ -7,16 +7,65 @@ PyBinSim
 Install
 -------
 
+Let's create a virtual environment. Use either Python or Conda to do this and then use `pip` to install the dependencies.
+
+Windows
+-------
+
+Assuming you are using the default command line 
+(navigate to `pyBinSim/` folder in Explorer, click into the address bar, type `cmd` and hit enter).
+
+
+python
+
+::
+    $ <PathToPython >= 3.6> -m venv venv
+    $ venv/Scripts/activate.bat
+    $ pip install pybinsim
+
+For Powershell, the activation command is `venv/Scripts/Activate.ps1`.
+
+
+conda
+
+::
+    $ conda create --name binsim python>=3.6 numpy
+    $ conda activate binsim
+    $ pip install pybinsim
+
+
+Linux
+-----
+
+On linux, make sure that gcc and the development headers for libfftw and portaudio are installed, before invoking `pip install pybinsim`.
+
+For ubuntu
+
 ::
 
-    $ conda create --name binsim python=3.5 numpy
-    $ source activate binsim
-    $ pip install pybinsim
-    
-On linux, make sure that gcc and the development headers for libfftw and portaudio are installed, before invoking `pip install pybinsim`.
-For ubuntu::
-
     $ apt-get install gcc portaudio19-dev libfftw3-dev
+
+For Fedora
+
+::
+
+    $ sudo dnf install gcc portaudio19-devel fftw-devel
+
+
+python
+
+::
+    $ <PathToPython >= 3.6> -m venv venv
+    $ source venv/bin/activate
+    $ pip install pybinsim
+
+
+conda
+
+::
+    $ conda create --name binsim python>=3.6 numpy
+    $ conda activate binsim
+    $ pip install pybinsim
     
 
 Run
