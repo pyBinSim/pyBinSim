@@ -31,7 +31,6 @@ setup(
     tests_require=['pytest'],
     cmdclass={'test': PyTest},
     install_requires=[
-        "future == 0.16.0",
         "numpy == 1.12.1",
         "ovr == 1.10.101",
         "pyaudio == 0.2.10",
@@ -39,7 +38,6 @@ setup(
         "pyserial == 3.2.1",
         "pytest == 3.0.5",
         "python-osc == 1.6.3",
-        "six == 1.10.0",
         "Soundfile == 0.9.0",
     ],
 
