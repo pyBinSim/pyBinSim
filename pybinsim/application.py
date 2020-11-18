@@ -133,9 +133,12 @@ class BinSim(object):
             self.stream = sd.OutputStream(samplerate=self.sampleRate,
                                           dtype=np.float32,
                                           channels=2,
+                                          latency="low",
                                           blocksize=self.blockSize,
                                           callback=audio_callback(self))
-            with self.stream:
+
+            with self.stream as s:
+                self.log.info(f"latency: {s.latency} seconds")
                 while True:
                     sd.sleep(1000)
 
