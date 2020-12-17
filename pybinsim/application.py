@@ -213,11 +213,14 @@ def audio_callback(binsim):
             binsim.soundHandler.request_new_sound_file(current_soundfile_list)
 
         # Get sound block. At least one convolver should exist
-        binsim.block[:binsim.soundHandler.get_sound_channels(
-        ), :] = binsim.soundHandler.buffer_read()
+        amount_channels = binsim.soundHandler.get_sound_channels()
+        if amount_channels == 0:
+            return
+
+        binsim.block[:amount_channels, :] = binsim.soundHandler.buffer_read()
 
         # Update Filters and run each convolver with the current block
-        for n in range(binsim.soundHandler.get_sound_channels()):
+        for n in range(amount_channels):
 
             # Get new Filter
             if binsim.oscReceiver.is_filter_update_necessary(n):
@@ -244,7 +247,7 @@ def audio_callback(binsim):
 
         # Scale data
         binsim.result = np.divide(binsim.result, float(
-            (binsim.soundHandler.get_sound_channels()) * 2))
+            (amount_channels) * 2))
         binsim.result = np.multiply(
             binsim.result, callback.config.get('loudnessFactor'))
 
