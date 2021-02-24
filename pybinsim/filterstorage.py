@@ -22,6 +22,7 @@
 
 import logging
 import multiprocessing
+from pathlib import Path
 
 import numpy as np
 import soundfile as sf
@@ -115,8 +116,19 @@ class FilterStorage(object):
         """
 
         self.log.info("Start loading filters...")
+        parsed_filter_list = list(self.parse_filter_list())
 
-        for i, (pose, filter_path) in enumerate(self.parse_filter_list()):
+        # check if all files are available
+        are_files_missing = False
+        for pose, filter_path in parsed_filter_list:
+            fn_filter = Path(filter_path)
+            if not fn_filter.exists():
+                self.log.warn(f'Wavefile not found: {fn_filter}')
+                are_files_missing = True
+        if are_files_missing:
+            raise FileNotFoundError("Some files are missing")
+
+        for pose, filter_path in parsed_filter_list:
             self.log.debug('Loading {}'.format(filter_path))
 
             loaded_filter = self.load_filter(filter_path)
