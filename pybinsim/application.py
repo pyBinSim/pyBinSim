@@ -23,6 +23,7 @@
 """ Module contains main loop and configuration of pyBinSim """
 import logging
 import time
+import sys
 
 import numpy as np
 import sounddevice as sd
@@ -207,6 +208,10 @@ def audio_callback(binsim):
     # The python-sounddevice Callback
     def callback(outdata, frame_count, time_info, status):
         # print("python-sounddevice callback")
+
+        if "debugpy" in sys.modules:
+            import debugpy
+            debugpy.debug_this_thread()
 
         current_soundfile_list = binsim.oscReceiver.get_sound_file_list()
         if current_soundfile_list:
