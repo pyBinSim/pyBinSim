@@ -31,7 +31,7 @@ setup(
     tests_require=['pytest'],
     cmdclass={'test': PyTest},
     install_requires=[
-        "future == 0.16.0",
+        "future == 1.0.0",
         "numpy == 1.12.1",
         "ovr == 1.10.101",
         "pyaudio == 0.2.10",
